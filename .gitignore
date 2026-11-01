@@ -12,6 +12,18 @@ dist
 dist-ssr
 *.local
 
+# Environment variables and secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# AI Agent internal instructions
+AGENTS.md
+CLAUDE.md
+COPILOT.md
+.gemini/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -22,3 +34,4 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
