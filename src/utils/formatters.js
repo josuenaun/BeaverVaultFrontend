@@ -16,11 +16,25 @@ export const formatearKilos = (peso) => {
 export const formatearFecha = (fecha) => {
   if (!fecha) return '-';
   try {
-    // Si viene formato YYYY-MM-DD, dividir para evitar desfasaje horario UTC
-    if (typeof fecha === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      const [year, month, day] = fecha.split('-');
-      return `${day}/${month}/${year}`;
+    // 1. Si viene como string
+    if (typeof fecha === 'string') {
+      const match = fecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      // Si es formato solo fecha YYYY-MM-DD o tiene medianoche UTC T00:00:00 (evitar retroceso por UTC-5)
+      if (match && (fecha.length === 10 || fecha.includes('T00:00:00') || fecha.includes(' 00:00:00'))) {
+        const [, year, month, day] = match;
+        return `${day}/${month}/${year}`;
+      }
     }
+    // 2. Si viene como objeto Date que está en medianoche UTC
+    if (fecha instanceof Date) {
+      if (fecha.getUTCHours() === 0 && fecha.getUTCMinutes() === 0 && fecha.getUTCSeconds() === 0) {
+        const day = String(fecha.getUTCDate()).padStart(2, '0');
+        const month = String(fecha.getUTCMonth() + 1).padStart(2, '0');
+        const year = fecha.getUTCFullYear();
+        return `${day}/${month}/${year}`;
+      }
+    }
+    // 3. Para timestamps reales (como ventas o auditorías), convertir al huso de Perú
     return new Intl.DateTimeFormat('es-PE', {
       timeZone: 'America/Lima',
       year: 'numeric',

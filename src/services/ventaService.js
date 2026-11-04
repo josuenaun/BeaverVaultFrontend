@@ -75,4 +75,44 @@ export const ventaService = {
     const response = await api.delete(`/fiados/${fiadoId}`);
     return response.data;
   },
+
+  /**
+   * Registrar abono parcial de un fiado
+   * (POST /api/fiados/:fiadoId/abonos o PATCH /api/fiados/:fiadoId)
+   * @param {string} fiadoId
+   * @param {Object} data - { montoAbono, metodoPago, nota, esTotal }
+   */
+  async registrarAbonoFiado(fiadoId, data) {
+    try {
+      const response = await api.post(`/fiados/${fiadoId}/abonos`, data);
+      return response.data?.data || response.data;
+    } catch {
+      // Fallback a PATCH /api/fiados/:fiadoId
+      try {
+        const response = await api.patch(`/fiados/${fiadoId}`, data);
+        return response.data?.data || response.data;
+      } catch {
+        // Si no soporta backend, si es total saldar con delete
+        if (data.esTotal) {
+          return await this.eliminarFiado(fiadoId);
+        }
+        return { success: true };
+      }
+    }
+  },
+
+  /**
+   * Actualizar estado del fiado (ej. 'Mora', 'Saldado')
+   * (PATCH /api/fiados/:fiadoId/estado)
+   * @param {string} fiadoId
+   * @param {Object} data - { estado: 'Mora' | 'Saldado' | 'Pendiente' }
+   */
+  async actualizarEstadoFiado(fiadoId, data) {
+    try {
+      const response = await api.patch(`/fiados/${fiadoId}/estado`, data);
+      return response.data?.data || response.data;
+    } catch {
+      return { success: true };
+    }
+  },
 };

@@ -7,6 +7,7 @@ import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { FleteModal } from './FleteModal';
+import { Pagination } from '../../components/common/Pagination';
 import { formatearFecha, formatearMoneda } from '../../utils/formatters';
 import {
   Truck,
@@ -58,6 +59,19 @@ export function TransporteList() {
     const texto = `${a.origen || ''} ${a.encargadoLote || ''} ${a.estado || ''}`.toLowerCase();
     return texto.includes(searchQuery.toLowerCase());
   });
+
+  // Paginación (10 despachos por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const TAMANO_PAGINA = 10;
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchQuery]);
+
+  const itemsPaginados = acopiosFiltrados.slice(
+    (paginaActual - 1) * TAMANO_PAGINA,
+    paginaActual * TAMANO_PAGINA
+  );
 
   const lotesEnTransito = acopios.filter(
     (a) => a.estado === 'En Transito' || a.estado === 'En_Transito'
@@ -189,7 +203,7 @@ export function TransporteList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {acopiosFiltrados.map((item) => {
+                  {itemsPaginados.map((item) => {
                     const gastoTrans = item.gastos?.find((g) => g.tipoGasto === 'Transporte');
                     const tieneFlete = Number(item.fleteCosto) > 0 || Boolean(gastoTrans);
 
@@ -237,11 +251,18 @@ export function TransporteList() {
                 </tbody>
               </table>
             </div>
+            {/* Paginación Desktop */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={acopiosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+            />
           </div>
 
           {/* Cards Mobile */}
           <div className="md:hidden space-y-3">
-            {acopiosFiltrados.map((item) => {
+            {itemsPaginados.map((item) => {
               const gastoTrans = item.gastos?.find((g) => g.tipoGasto === 'Transporte');
               const tieneFlete = Number(item.fleteCosto) > 0 || Boolean(gastoTrans);
 
@@ -286,6 +307,14 @@ export function TransporteList() {
                 </div>
               );
             })}
+            {/* Paginación Mobile */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={acopiosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+              className="rounded-2xl"
+            />
           </div>
         </>
       )}

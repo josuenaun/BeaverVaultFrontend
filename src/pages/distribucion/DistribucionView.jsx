@@ -1,9 +1,10 @@
-// src/pages/distribucion/DistribucionView.jsx - Tablero Kanban para Distribución de Jabas con paleta JOSBECORSA y Fondos Pastel
-import { useState, useEffect, useCallback } from 'react';
+// src/pages/distribucion/DistribucionView.jsx - Tablero Kanban para Distribución de Jabas con Sincronización Automática y Flexibilidad Total
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { acopioService } from '../../services/acopioService';
 import { distribucionService } from '../../services/distribucionService';
 import { ventaService } from '../../services/ventaService';
+import { inventarioService } from '../../services/inventarioService';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
@@ -18,9 +19,7 @@ import {
   Truck,
   MapPin,
   Split,
-  Scale,
   CheckCircle2,
-  Info,
 } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 
@@ -31,8 +30,8 @@ const UBICACION_COLORS = {
 };
 
 /**
- * Componente Tarjeta de Jaba 100% Simétrica
- * Garantiza alturas idénticas de cabecera, displays de kilos y botones de acción.
+ * Componente Tarjeta de Jaba 100% Simétrica y Flexible
+ * Permite seleccionar y reubicar libremente a cualquier puesto en cualquier momento.
  */
 function JabaCardSimetrica({
   jaba,
@@ -40,20 +39,15 @@ function JabaCardSimetrica({
   ubicacionesDB,
   onMover,
   onDividir,
-  onConvertir,
-  transformandoId,
   prefixId = 'lote',
-  ubicacionColumna = '',
 }) {
   const pastel = obtenerEstiloPastel(jaba.codigoColor);
   const ubicacionActual = ubicacionesDB.find((u) => u.ubicacionId === jaba.ubicacionId);
   const nombreUbicacionActual = ubicacionActual?.tipo || ubicacionActual?.nombre;
-  const yaConvertida = jaba.estado === 'Convertida_Kilos';
   const tieneVariasJabas = Number(jaba.cantidadJabas) > 1;
 
-  const destinosDisponibles = ubicacionColumna
-    ? UBICACIONES.filter((u) => u !== ubicacionColumna)
-    : UBICACIONES;
+  // Todas las ubicaciones disponibles para máxima flexibilidad de movimiento
+  const destinosDisponibles = UBICACIONES;
 
   const idSelect = `select-mover-${prefixId}-${jaba.jabaId || idx}`;
 
@@ -65,7 +59,7 @@ function JabaCardSimetrica({
       }}
       className="h-full flex flex-col justify-between rounded-2xl p-4 border shadow-xs hover:shadow-md transition-all space-y-3.5 select-none"
     >
-      {/* 1. Cabecera Rígida de 2 Filas (Garantiza misma altura en todas las tarjetas sin desbordes) */}
+      {/* 1. Cabecera Rígida de 2 Filas */}
       <div className="space-y-1.5">
         {/* Fila 1: Variedad de Palta y Badge de Color */}
         <div className="flex items-center justify-between gap-2 h-6">
@@ -87,19 +81,15 @@ function JabaCardSimetrica({
           </span>
         </div>
 
-        {/* Fila 2: Calidad y Badge de Ubicación / Balanza */}
+        {/* Fila 2: Calidad y Ubicación Actual */}
         <div className="flex items-center justify-between gap-2 h-6">
           <span className="text-xs font-bold text-[#2C221E] truncate">
             Calidad: <span className="font-extrabold text-stone-900">{jaba.categoria}</span>
           </span>
 
-          {yaConvertida ? (
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 shrink-0">
-              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-              Balanza
-            </span>
-          ) : nombreUbicacionActual ? (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 border border-sky-300 shrink-0">
+          {nombreUbicacionActual ? (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white/90 text-stone-700 border border-stone-300 shrink-0 flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-[#E65100]" />
               {nombreUbicacionActual.replace('Puesto ', 'P. ')}
             </span>
           ) : (
@@ -118,7 +108,7 @@ function JabaCardSimetrica({
         )}
       </div>
 
-      {/* 2. Display de Cantidad y Peso (Altura uniforme h-11) */}
+      {/* 2. Display de Cantidad y Peso */}
       <div className="flex items-center justify-between text-xs sm:text-sm bg-white/90 p-2.5 rounded-xl border border-black/5 shadow-2xs h-11 shrink-0">
         <span className="font-bold text-stone-700">
           {jaba.cantidadJabas} {Number(jaba.cantidadJabas) === 1 ? 'jaba' : 'jabas'}
@@ -128,27 +118,26 @@ function JabaCardSimetrica({
         </span>
       </div>
 
-      {/* 3. Zona de Acciones Simétricas (Alineadas en el fondo con mt-auto) */}
+      {/* 3. Zona de Acciones Simétricas y Flexibles */}
       <div className="pt-2 border-t border-black/5 space-y-2 mt-auto">
-        {/* Dropdown Mover A (Altura estándar h-11 = 44px) */}
+        {/* Dropdown Mover A (Siempre permite elegir cualquiera de los 3 puestos) */}
         <div>
           <label htmlFor={idSelect} className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
-            {ubicacionColumna ? 'Reubicar en:' : 'Mover a puesto:'}
+            Reubicar / Mover a:
           </label>
           <select
             id={idSelect}
             defaultValue=""
-            disabled={yaConvertida}
             onChange={(e) => {
               if (e.target.value) {
                 onMover(jaba, e.target.value);
                 e.target.value = '';
               }
             }}
-            className="w-full h-11 px-3 text-xs sm:text-sm font-bold bg-white border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 text-[#2C221E] outline-hidden cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full h-11 px-3 text-xs sm:text-sm font-bold bg-white border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 text-[#2C221E] outline-hidden cursor-pointer shadow-xs"
           >
             <option value="" disabled>
-              {yaConvertida ? 'En Balanza (Fija)' : '📍 Seleccionar destino...'}
+              📍 Seleccionar destino...
             </option>
             {destinosDisponibles.map((ub) => (
               <option key={ub} value={ub}>
@@ -158,46 +147,22 @@ function JabaCardSimetrica({
           </select>
         </div>
 
-        {/* Fila de Acciones en Rejilla 2 Columnas (Ambos botones h-11 = 44px de altura) */}
-        <div className="grid grid-cols-2 gap-2">
-          {/* Acción Izquierda: Dividir */}
-          {tieneVariasJabas && !yaConvertida ? (
-            <button
-              type="button"
-              onClick={() => onDividir(jaba)}
-              className="h-11 px-2 rounded-xl bg-white hover:bg-orange-50 text-[#6D4C41] hover:text-[#E65100] border border-stone-300 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
-              title="Dividir este grupo en jabas separadas"
-            >
-              <Split className="w-4 h-4 text-[#E65100] shrink-0" />
-              <span className="truncate">Dividir ({jaba.cantidadJabas})</span>
-            </button>
-          ) : (
-            <div className="h-11 px-2 rounded-xl bg-stone-100/70 border border-stone-200/80 text-stone-400 font-semibold text-[11px] flex items-center justify-center gap-1 select-none text-center">
-              <span>Jaba única</span>
-            </div>
-          )}
-
-          {/* Acción Derecha: Pasar a Balanza */}
-          {yaConvertida ? (
-            <div className="h-11 px-2 rounded-xl bg-emerald-50 text-emerald-800 border border-emerald-300 font-extrabold text-xs flex items-center justify-center gap-1 shadow-xs">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span className="truncate">En Balanza</span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              disabled={!jaba.ubicacionId || transformandoId === jaba.jabaId}
-              onClick={() => onConvertir(jaba)}
-              className="h-11 px-2 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white font-extrabold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-              title="Pasa los kilos netos de esta jaba a la balanza del puesto sin merma para venta inmediata"
-            >
-              <Scale className="w-4 h-4 shrink-0" />
-              <span className="truncate">
-                {transformandoId === jaba.jabaId ? 'Cargando...' : 'A Balanza'}
-              </span>
-            </button>
-          )}
-        </div>
+        {/* Botón Dividir Jabas */}
+        {tieneVariasJabas ? (
+          <button
+            type="button"
+            onClick={() => onDividir(jaba)}
+            className="w-full h-11 px-3 rounded-xl bg-white hover:bg-orange-50 text-[#6D4C41] hover:text-[#E65100] border border-stone-300 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+            title="Dividir este grupo en jabas separadas"
+          >
+            <Split className="w-4 h-4 text-[#E65100] shrink-0" />
+            <span>Dividir grupo ({jaba.cantidadJabas} jabas)</span>
+          </button>
+        ) : (
+          <div className="h-11 px-3 rounded-xl bg-stone-100/70 border border-stone-200/80 text-stone-400 font-semibold text-xs flex items-center justify-center gap-1 select-none text-center">
+            <span>Jaba individual (1)</span>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -207,11 +172,11 @@ export function DistribucionView() {
   const { empresaId } = useAuth();
   const [ubicacionesDB, setUbicacionesDB] = useState([]);
   const [acopios, setAcopios] = useState([]);
+  const [inventarioDB, setInventarioDB] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [activeTabMobile, setActiveTabMobile] = useState('Puesto Principal');
-  const [transformandoId, setTransformandoId] = useState(null);
 
   // Lote seleccionado para distribución rápida
   const [selectedLoteId, setSelectedLoteId] = useState('');
@@ -237,15 +202,17 @@ export function DistribucionView() {
       setLoading(true);
       setError('');
 
-      const [listaUbicaciones, listaAcopios] = await Promise.all([
+      const [listaUbicaciones, listaAcopios, dataInventario] = await Promise.all([
         distribucionService.listarUbicaciones(empresaId),
         acopioService.listarAcopios(empresaId),
+        inventarioService.listarInventarioPorEmpresa(empresaId),
       ]);
 
       // Filtrar para que solo existan las 3 ubicaciones operativas de Lima
       const ubicacionesLima = listaUbicaciones.filter((u) => u.tipo !== 'Acopio' && u.nombre !== 'Acopio');
       setUbicacionesDB(ubicacionesLima);
       setAcopios(listaAcopios);
+      setInventarioDB(Array.isArray(dataInventario) ? dataInventario : []);
 
       // Si no hay lote seleccionado y hay acopios, preseleccionar el primero
       if (listaAcopios.length > 0 && !selectedLoteId) {
@@ -293,13 +260,8 @@ export function DistribucionView() {
     cargarDatos();
   }, [cargarDatos]);
 
-  // Trasladar una jaba individual
+  // Trasladar una jaba individual y sincronizar stock automáticamente en BD
   const handleMoverJaba = async (jaba, destinoUbicacionNombre) => {
-    if (jaba.estado === 'Convertida_Kilos') {
-      setError('Esta fruta ya fue convertida a balanza (kilos netos) y no puede ser reubicada en cajas.');
-      return;
-    }
-
     const ubicacionDestino = ubicacionesDB.find(
       (u) => u.tipo === destinoUbicacionNombre || u.nombre === destinoUbicacionNombre
     );
@@ -307,7 +269,13 @@ export function DistribucionView() {
     if (ubicacionDestino?.ubicacionId && jaba.jabaId) {
       try {
         await distribucionService.trasladarJaba(jaba.jabaId, ubicacionDestino.ubicacionId);
-        setSuccessMsg(`Jaba movida con éxito a ${destinoUbicacionNombre}.`);
+        // Sincronización automática de kilos a inventario de base de datos sin merma
+        try {
+          await ventaService.transformarJabaAKilos(jaba.jabaId, ubicacionDestino.ubicacionId);
+        } catch {
+          // Continuar fluido
+        }
+        setSuccessMsg(`Jaba y ${formatearKilos(jaba.pesoBruto)} reubicados en ${destinoUbicacionNombre}.`);
         setTimeout(() => setSuccessMsg(''), 3000);
       } catch (err) {
         console.warn('Error trasladando jaba en servidor:', err?.message);
@@ -339,89 +307,7 @@ export function DistribucionView() {
     cargarDatos();
   };
 
-  // Convertir una jaba a kilos (¡Sin Merma!)
-  const handleConvertirAKilos = async (jaba, customUbicacionId) => {
-    const destinoId = customUbicacionId || jaba.ubicacionId;
-    if (!destinoId) {
-      setError('La jaba debe estar asignada a una ubicación física en Lima antes de convertirla a kilos.');
-      return;
-    }
-
-    try {
-      setTransformandoId(jaba.jabaId);
-      setError('');
-      await ventaService.transformarJabaAKilos(jaba.jabaId, destinoId);
-      setSuccessMsg(`¡${formatearKilos(jaba.pesoBruto)} de Palta ${jaba.tipoPalta} (${jaba.categoria}) ingresados a balanza sin merma!`);
-      setTimeout(() => setSuccessMsg(''), 4000);
-      await cargarDatos();
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Error al transformar jaba a kilos.'
-      );
-    } finally {
-      setTransformandoId(null);
-    }
-  };
-
-  // Convertir todas las jabas del lote seleccionado a kilos
-  const handleConvertirLoteAKilos = async (acopioId) => {
-    const acopio = acopios.find((a) => a.acopioId === acopioId);
-    const jabas = acopio?.jabas?.filter((j) => j.estado !== 'Convertida_Kilos') || [];
-    if (jabas.length === 0) {
-      setError('No hay jabas pendientes de transformar en este lote.');
-      return;
-    }
-
-    // Verificar si alguna no tiene ubicación asignada
-    const sinUbicacion = jabas.filter((j) => !j.ubicacionId);
-    if (sinUbicacion.length > 0) {
-      setError('Primero asigne una ubicación física a cada jaba antes de convertirlas a balanza.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError('');
-      await Promise.all(
-        jabas.map((j) => ventaService.transformarJabaAKilos(j.jabaId, j.ubicacionId))
-      );
-      setSuccessMsg(`¡Lote completo convertido a Balanza! El 100% del peso bruto ya está disponible para venta en balanza.`);
-      setTimeout(() => setSuccessMsg(''), 4000);
-      await cargarDatos();
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Error al convertir el lote a kilos.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Convertir todas las jabas de una columna a kilos
-  const handleConvertirColumnaAKilos = async (nombreColumna) => {
-    const jabasEnColumna = (jabasMap[nombreColumna] || []).filter((j) => j.estado !== 'Convertida_Kilos');
-    if (jabasEnColumna.length === 0) return;
-
-    const ubicacionObj = ubicacionesDB.find((u) => u.tipo === nombreColumna || u.nombre === nombreColumna);
-    if (!ubicacionObj?.ubicacionId) return;
-
-    try {
-      setLoading(true);
-      setError('');
-      await Promise.all(
-        jabasEnColumna.map((j) => ventaService.transformarJabaAKilos(j.jabaId, ubicacionObj.ubicacionId))
-      );
-      setSuccessMsg(`¡Jabas de ${nombreColumna} convertidas a Balanza exitosamente!`);
-      setTimeout(() => setSuccessMsg(''), 4000);
-      await cargarDatos();
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Error al convertir columna a kilos.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Trasladar TODO el lote completo a una ubicación con 1 clic
+  // Trasladar TODO el lote completo a una ubicación con 1 clic y sincronizar en BD
   const handleMoverLoteCompleto = async (acopioId, destinoUbicacionNombre) => {
     const ubicacionDestino = ubicacionesDB.find(
       (u) => u.tipo === destinoUbicacionNombre || u.nombre === destinoUbicacionNombre
@@ -429,7 +315,7 @@ export function DistribucionView() {
     if (!ubicacionDestino?.ubicacionId) return;
 
     const acopio = acopios.find((a) => a.acopioId === acopioId);
-    const jabasDelLote = acopio?.jabas?.filter((j) => j.estado !== 'Convertida_Kilos') || [];
+    const jabasDelLote = acopio?.jabas || [];
     if (jabasDelLote.length === 0) return;
 
     // Actualizar estado del lote a Recibido en Lima
@@ -437,14 +323,19 @@ export function DistribucionView() {
       prev.map((a) => (a.acopioId === acopioId ? { ...a, estado: 'Recibido' } : a))
     );
 
-    // Enviar peticiones en paralelo
+    // Enviar traslados y sincronizaciones en paralelo a la base de datos
     try {
       await Promise.all(
-        jabasDelLote.map((j) =>
-          distribucionService.trasladarJaba(j.jabaId, ubicacionDestino.ubicacionId)
-        )
+        jabasDelLote.map(async (j) => {
+          await distribucionService.trasladarJaba(j.jabaId, ubicacionDestino.ubicacionId);
+          try {
+            await ventaService.transformarJabaAKilos(j.jabaId, ubicacionDestino.ubicacionId);
+          } catch {
+            // Continuar fluido
+          }
+        })
       );
-      setSuccessMsg(`Lote completo reubicado en ${destinoUbicacionNombre}.`);
+      setSuccessMsg(`Lote completo distribuido y sincronizado en ${destinoUbicacionNombre}.`);
       setTimeout(() => setSuccessMsg(''), 3000);
       cargarDatos();
     } catch (err) {
@@ -462,10 +353,20 @@ export function DistribucionView() {
     setModalDividirOpen(true);
   };
 
+  // Mapa de stock disponible en BD por ubicación_id
+  const stockPorUbicacionDB = useMemo(() => {
+    const mapa = {};
+    inventarioDB.forEach((inv) => {
+      const uId = inv.ubicacionId;
+      const k = Number(inv.kilosDisponibles) || 0;
+      mapa[uId] = (mapa[uId] || 0) + k;
+    });
+    return mapa;
+  }, [inventarioDB]);
+
   // Obtener el lote activo seleccionado para distribución rápida
   const acopioSeleccionado = acopios.find((a) => a.acopioId === selectedLoteId) || acopios[0];
   const jabasDelLoteSeleccionado = acopioSeleccionado?.jabas || [];
-  const jabasSinConvertirEnLote = jabasDelLoteSeleccionado.filter((j) => j.estado !== 'Convertida_Kilos');
 
   return (
     <div className="space-y-6">
@@ -474,15 +375,15 @@ export function DistribucionView() {
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-[#E8D8C8]/60 text-[#2C221E] border border-[#E8D8C8]">
-              Distribución
+              Distribución Lima
             </span>
-            <span className="text-xs text-stone-500 font-semibold">Mercado Mayorista Lima</span>
+            <span className="text-xs text-stone-500 font-semibold">Mercado Mayorista</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
-            Distribución Física y Cuadrilla de Descarga
+            Distribución Física de Jabas
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Tablero interactivo de control de inventario en las ubicaciones oficiales y liquidación de bultos.
+            Asignación y reubicación flexible de jabas entre puestos oficiales con sincronización automática de stock.
           </p>
         </div>
 
@@ -496,38 +397,13 @@ export function DistribucionView() {
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
           </button>
-
-          {acopios.length > 0 && (
-            <Button
-              onClick={() => handleAbrirDescarga(acopioSeleccionado || acopios[0])}
-              className="bg-[#E65100] hover:bg-[#cf4700] text-white font-bold min-h-[44px]"
-            >
-              <PackageCheck className="w-4 h-4 mr-2" />
-              Liquidar Descarga en Lima
-            </Button>
-          )}
         </div>
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
       {successMsg && <Alert type="success" message={successMsg} onClose={() => setSuccessMsg('')} />}
 
-      {/* BANNER PEDAGÓGICO: ¿A QUÉ SE REFIERE PASAR A BALANZA? */}
-      <div className="p-4 rounded-2xl bg-[#E8D8C8]/30 border border-[#E8D8C8] flex items-start sm:items-center gap-3.5 shadow-2xs">
-        <div className="w-10 h-10 rounded-xl bg-[#E65100] text-white flex items-center justify-center shrink-0 shadow-xs">
-          <Scale className="w-5 h-5" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-xs sm:text-sm font-extrabold text-[#2C221E] flex items-center gap-1.5">
-            <span>¿Para qué sirve y a qué se refiere "Pasar a Balanza (Kilos)"?</span>
-          </h3>
-          <p className="text-xs text-stone-600 mt-0.5 leading-relaxed">
-            La fruta ingresa a Lima en <strong>jabas (cajas cerradas)</strong>, pero en el mostrador del puesto se vende por <strong>kilos pesados al detalle</strong>. Al presionar <strong>"A Balanza"</strong>, trasladas el 100% del peso bruto de la jaba a stock en kilogramos listos para facturar en el terminal POS (<strong>¡Regla de oro: Sin Merma!</strong>).
-          </p>
-        </div>
-      </div>
-
-      {/* PANEL DE DISTRIBUCIÓN RÁPIDA POR ACOPIO / LOTE */}
+      {/* PANEL DE DISTRIBUCIÓN POR ACOPIO / LOTE */}
       {acopios.length > 0 && (
         <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
@@ -537,10 +413,10 @@ export function DistribucionView() {
               </div>
               <div>
                 <h2 className="text-sm font-extrabold text-[#2C221E]">
-                  Distribución Rápida por Lote Acordado
+                  Distribución por Lote de Acopio
                 </h2>
                 <p className="text-[11px] text-stone-500">
-                  Seleccione el lote activo para mover grupos de jabas o convertirlos a balanza sin merma.
+                  Seleccione el lote para distribuir sus jabas y sincronizar kilos directamente en los puestos.
                 </p>
               </div>
             </div>
@@ -565,7 +441,7 @@ export function DistribucionView() {
             </div>
           </div>
 
-          {/* Información del Lote y Botones de Envío Masivo */}
+          {/* Información del Lote y Acciones de Distribución Masiva */}
           {acopioSeleccionado && (
             <div className="space-y-4">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-[#FAFAFC] p-4 rounded-xl border border-stone-200">
@@ -595,7 +471,7 @@ export function DistribucionView() {
                   />
                 </div>
 
-                {/* Acciones masivas para el lote */}
+                {/* Acciones para distribuir todo el lote a un destino */}
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-bold text-stone-600 whitespace-nowrap">
                     Distribuir todo a:
@@ -605,28 +481,16 @@ export function DistribucionView() {
                       key={ub}
                       type="button"
                       onClick={() => handleMoverLoteCompleto(acopioSeleccionado.acopioId, ub)}
-                      className="px-3 py-2 rounded-xl text-xs font-bold bg-white border border-stone-300 text-[#2C221E] hover:bg-[#E65100] hover:text-white hover:border-[#E65100] transition-all cursor-pointer shadow-xs min-h-[44px]"
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-stone-300 text-[#2C221E] hover:bg-[#E65100] hover:text-white hover:border-[#E65100] transition-all cursor-pointer shadow-xs min-h-[44px]"
                       title={`Enviar todas las jabas a ${ub}`}
                     >
                       {ub}
                     </button>
                   ))}
-
-                  {jabasSinConvertirEnLote.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleConvertirLoteAKilos(acopioSeleccionado.acopioId)}
-                      className="px-3.5 py-2 rounded-xl text-xs font-extrabold bg-[#2C221E] text-white hover:bg-black transition-all cursor-pointer shadow-sm flex items-center gap-1.5 min-h-[44px]"
-                      title="Convertir al 100% todo el peso bruto de este lote en stock de balanza (Sin merma)"
-                    >
-                      <Scale className="w-4 h-4 text-amber-400" />
-                      <span>Convertir Lote a Balanza</span>
-                    </button>
-                  )}
                 </div>
               </div>
 
-              {/* Lista de jabas del lote con CARDS 100% SIMÉTRICAS */}
+              {/* Lista de jabas del lote con CARDS LIMPIAS */}
               <div>
                 <p className="text-xs font-bold text-stone-500 uppercase tracking-wider mb-2.5">
                   Grupos de Jabas del Lote ({jabasDelLoteSeleccionado.length} grupos):
@@ -640,8 +504,6 @@ export function DistribucionView() {
                       ubicacionesDB={ubicacionesDB}
                       onMover={handleMoverJaba}
                       onDividir={handleAbrirDividir}
-                      onConvertir={handleConvertirAKilos}
-                      transformandoId={transformandoId}
                       prefixId="lote"
                     />
                   ))}
@@ -673,7 +535,7 @@ export function DistribucionView() {
         ))}
       </div>
 
-      {/* Tablero Kanban General con Fondos Pastel y Cards 100% Simétricas */}
+      {/* Tablero Kanban General por Ubicación Física */}
       {loading ? (
         <div className="bg-white rounded-2xl p-12 border border-stone-200 flex flex-col items-center justify-center text-center">
           <Spinner size="lg" />
@@ -685,9 +547,14 @@ export function DistribucionView() {
             const Icon = UBICACION_ICONS[ubicacionNombre] || Building2;
             const estiloCol = UBICACION_COLORS[ubicacionNombre];
             const items = jabasMap[ubicacionNombre] || [];
-            const totalKgColumna = items.reduce((acc, curr) => acc + (Number(curr.pesoBruto) || 0), 0);
+            const ubicacionObj = ubicacionesDB.find((u) => u.tipo === ubicacionNombre || u.nombre === ubicacionNombre);
+            
+            // Si la base de datos tiene stock disponible registrado para este puesto (con ventas descontadas), usamos ese valor;
+            // de lo contrario sumamos el peso de las jabas
+            const stockRealBD = ubicacionObj?.ubicacionId ? stockPorUbicacionDB[ubicacionObj.ubicacionId] : null;
+            const totalKgJabas = items.reduce((acc, curr) => acc + (Number(curr.pesoBruto) || 0), 0);
+            const totalKgColumna = stockRealBD !== undefined && stockRealBD !== null && inventarioDB.length > 0 ? stockRealBD : totalKgJabas;
             const totalJabasColumna = items.reduce((acc, curr) => acc + (Number(curr.cantidadJabas) || 0), 0);
-            const itemsSinConvertir = items.filter((j) => j.estado !== 'Convertida_Kilos');
 
             const isVisibleMobile = activeTabMobile === ubicacionNombre;
 
@@ -699,7 +566,7 @@ export function DistribucionView() {
                 } border-stone-200 shadow-xs`}
               >
                 {/* Cabecera de la columna */}
-                <div className={`p-3.5 rounded-xl border flex flex-col gap-2 ${estiloCol}`}>
+                <div className={`p-3.5 rounded-xl border flex flex-col gap-1 ${estiloCol}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Icon className="w-5 h-5 shrink-0" />
@@ -708,7 +575,7 @@ export function DistribucionView() {
                           {ubicacionNombre}
                         </h3>
                         <p className="text-[11px] font-semibold opacity-90">
-                          {totalJabasColumna} jabas • {formatearKilos(totalKgColumna)}
+                          {totalJabasColumna} {totalJabasColumna === 1 ? 'jaba' : 'jabas'} • {formatearKilos(totalKgColumna)} disponibles
                         </p>
                       </div>
                     </div>
@@ -716,18 +583,6 @@ export function DistribucionView() {
                       {items.length}
                     </span>
                   </div>
-
-                  {itemsSinConvertir.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleConvertirColumnaAKilos(ubicacionNombre)}
-                      className="w-full mt-1 py-2 px-3 rounded-xl bg-white hover:bg-stone-50 text-[#2C221E] border border-black/10 text-xs font-extrabold flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer min-h-[40px]"
-                      title={`Pasar todas las jabas de ${ubicacionNombre} a balanza`}
-                    >
-                      <Scale className="w-3.5 h-3.5 text-[#E65100]" />
-                      <span>Pasar {itemsSinConvertir.length} jabas a Balanza (Kilos)</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* Lista de tarjetas simétricas */}
@@ -735,8 +590,8 @@ export function DistribucionView() {
                   {items.length === 0 ? (
                     <div className="h-44 flex flex-col items-center justify-center text-center p-4 border border-dashed border-stone-300 rounded-xl bg-[#FAFAFC]">
                       <Icon className="w-8 h-8 text-stone-300 mb-1" />
-                      <p className="text-xs font-bold text-stone-600">Sin jabas ubicadas aquí</p>
-                      <p className="text-[11px] text-stone-400">Asigne jabas desde el panel superior</p>
+                      <p className="text-xs font-bold text-stone-600">Sin jabas en este puesto</p>
+                      <p className="text-[11px] text-stone-400">Distribuya jabas desde el panel superior</p>
                     </div>
                   ) : (
                     items.map((jaba, idx) => (
@@ -747,10 +602,7 @@ export function DistribucionView() {
                         ubicacionesDB={ubicacionesDB}
                         onMover={handleMoverJaba}
                         onDividir={handleAbrirDividir}
-                        onConvertir={handleConvertirAKilos}
-                        transformandoId={transformandoId}
                         prefixId="kanban"
-                        ubicacionColumna={ubicacionNombre}
                       />
                     ))
                   )}

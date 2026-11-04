@@ -11,6 +11,7 @@ import { TransporteList } from './pages/transporte/TransporteList';
 import { DistribucionView } from './pages/distribucion/DistribucionView';
 import { InventarioView } from './pages/inventario/InventarioView';
 import { PuntoVentaPOS } from './pages/ventas/PuntoVentaPOS';
+import { PaltasVendidasView } from './pages/ventas/PaltasVendidasView';
 import { GastosOperativos } from './pages/gastos/GastosOperativos';
 import { FiadosList } from './pages/fiados/FiadosList';
 import { ConfiguracionView } from './pages/configuracion/ConfiguracionView';
@@ -39,8 +40,8 @@ export default function App() {
             <Route path="acopio" element={<AcopioList />} />
             <Route path="acopio/nuevo" element={<AcopioCreate />} />
 
-            {/* Etapa 2: Transporte */}
-            <Route path="transporte" element={<TransporteList />} />
+            {/* Redirección de Transporte a Gastos Operativos Centralizados */}
+            <Route path="transporte" element={<Navigate to="/gastos-operativos" replace />} />
 
             {/* Etapa 3: Distribución */}
             <Route path="distribucion" element={<DistribucionView />} />
@@ -50,6 +51,7 @@ export default function App() {
 
             {/* Etapa 4: Ventas POS */}
             <Route path="ventas" element={<PuntoVentaPOS />} />
+            <Route path="paltas-vendidas" element={<PaltasVendidasView />} />
             
             {/* Gastos Operativos */}
             <Route path="gastos-operativos" element={<GastosOperativos />} />

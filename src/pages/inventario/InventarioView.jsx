@@ -1,42 +1,37 @@
-// src/pages/inventario/InventarioView.jsx - Módulo de Inventario de Kilos por Puesto
+// src/pages/inventario/InventarioView.jsx - Módulo de Inventario por Puesto Sincronizado Estrictamente con Distribución Lima
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { inventarioService } from '../../services/inventarioService';
 import { acopioService } from '../../services/acopioService';
 import { ventaService } from '../../services/ventaService';
-import { formatearKilos, formatearFecha } from '../../utils/formatters';
-import { UBICACIONES, TIPOS_PALTA, UBICACION_ICONS } from '../../utils/constants';
+import { formatearKilos } from '../../utils/formatters';
+import { UBICACIONES, TIPOS_PALTA } from '../../utils/constants';
 import { Alert } from '../../components/common/Alert';
 import { Spinner } from '../../components/common/Spinner';
+import { Pagination } from '../../components/common/Pagination';
 import {
   Warehouse,
   Scale,
   RefreshCw,
-  Search,
-  Filter,
   Snowflake,
   Store,
   Building2,
   ArrowRight,
   TrendingUp,
-  PackageCheck,
   CheckCircle2,
-  AlertCircle,
-  Box,
 } from 'lucide-react';
 
 export function InventarioView() {
   const { empresaId, empresaActiva } = useAuth();
   const navigate = useNavigate();
 
-  const [inventario, setInventario] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [acopios, setAcopios] = useState([]);
+  const [ventas, setVentas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
-  const [transformando, setTransformando] = useState(false);
 
   // Filtros interactivos
   const [filtroUbicacion, setFiltroUbicacion] = useState('TODOS');
@@ -53,20 +48,20 @@ export function InventarioView() {
     return nombre;
   }, []);
 
-  // Cargar inventario en balanza, ubicaciones y acopios con jabas distribuidas
+  // Cargar datos sincronizados: ubicaciones, acopios con jabas distribuidas y ventas
   const cargarInventario = useCallback(async () => {
     if (!empresaId) return;
     setLoading(true);
     setError('');
     try {
-      const [dataInventario, dataUbicaciones, dataAcopios] = await Promise.all([
-        inventarioService.listarInventarioPorEmpresa(empresaId),
+      const [dataUbicaciones, dataAcopios, dataVentas] = await Promise.all([
         inventarioService.listarUbicaciones(empresaId),
         acopioService.listarAcopios(empresaId),
+        ventaService.listarVentas(empresaId),
       ]);
-      setInventario(Array.isArray(dataInventario) ? dataInventario : []);
       setUbicaciones(Array.isArray(dataUbicaciones) ? dataUbicaciones : []);
       setAcopios(Array.isArray(dataAcopios) ? dataAcopios : []);
+      setVentas(Array.isArray(dataVentas) ? dataVentas : []);
     } catch (err) {
       console.error('Error cargando inventario por puesto:', err);
       setError(err?.response?.data?.error || err?.message || 'No se pudo cargar el inventario de kilos.');
@@ -79,7 +74,7 @@ export function InventarioView() {
     cargarInventario();
   }, [cargarInventario]);
 
-  // Mapa de configuración visual para las 3 ubicaciones de Lima (Iconos estandarizados)
+  // Configuración visual para las 3 ubicaciones de Lima
   const configUbicaciones = useMemo(() => ({
     'Camara Frio': {
       nombre: 'Cámara Frío',
@@ -87,7 +82,7 @@ export function InventarioView() {
       colorBg: 'bg-sky-50 text-sky-700 border-sky-200',
       badgeColor: 'bg-sky-100 text-sky-800 border-sky-300',
       accentColor: '#0288D1',
-      descripcion: 'Conservación en frío y control de maduración.',
+      descripcion: 'Conservación en frío y stock disponible para venta.',
     },
     'Puesto Principal': {
       nombre: 'Puesto Principal',
@@ -95,7 +90,7 @@ export function InventarioView() {
       colorBg: 'bg-emerald-50 text-emerald-800 border-emerald-200',
       badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
       accentColor: '#10B981',
-      descripcion: 'Punto neurálgico de venta mayorista y balanza.',
+      descripcion: 'Punto central de venta directa mayorista.',
     },
     'Puesto Contingencia': {
       nombre: 'Puesto Contingencia',
@@ -107,7 +102,7 @@ export function InventarioView() {
     },
   }), []);
 
-  // Extraer todas las jabas ubicadas en Lima desde los acopios
+  // Extraer todas las jabas ubicadas en Lima desde los acopios activos (Distribución Lima)
   const jabasEnLima = useMemo(() => {
     const list = [];
     acopios.forEach((acopio) => {
@@ -128,150 +123,130 @@ export function InventarioView() {
     return list;
   }, [acopios, ubicaciones, normalizarNombreUbicacion]);
 
-  // Jabas que están ubicadas en Lima pero aún no se han transformado a inventarios_kilos
-  const jabasPendientesTransformar = useMemo(() => {
-    return jabasEnLima.filter((j) => j.estado !== 'Convertida_Kilos');
-  }, [jabasEnLima]);
+  // Mapa de kilos vendidos por (ubicacion_id/puestoNorm + tipoPalta + categoria)
+  const mapaVentasPorPuesto = useMemo(() => {
+    const mapa = new Map();
+    ventas.forEach((v) => {
+      const ubicacionObj = ubicaciones.find((u) => u.ubicacionId === (v.ubicacionId || v._ubicacionId));
+      const puestoNorm = normalizarNombreUbicacion(ubicacionObj?.tipo || ubicacionObj?.nombre || v.ubicacionNombre);
+      const detalles = v.detalles || v._detalles || [];
 
-  // Convertir todas las jabas pendientes de Lima a balanza (¡Sin merma!)
-  const handleConvertirTodasABalanza = async () => {
-    if (jabasPendientesTransformar.length === 0) return;
-    try {
-      setTransformando(true);
-      setError('');
-      await Promise.all(
-        jabasPendientesTransformar.map((j) =>
-          ventaService.transformarJabaAKilos(j.jabaId, j.ubicacionId)
-        )
-      );
-      setSuccessMsg('¡Todas las jabas distribuidas en Lima han sido convertidas a Balanza sin merma!');
-      setTimeout(() => setSuccessMsg(''), 5000);
-      await cargarInventario();
-    } catch (err) {
-      setError(
-        err.response?.data?.message ||
-        err.response?.data?.error ||
-        'Error al convertir jabas a balanza.'
-      );
-    } finally {
-      setTransformando(false);
+      detalles.forEach((d) => {
+        const tp = d.tipoPalta || 'Fuerte';
+        const cat = d.categoria || '1era';
+        const key = `${puestoNorm}_${tp}_${cat}`;
+        const kv = Number(d.kilosVendidos || d.kilos || 0);
+        mapa.set(key, (mapa.get(key) || 0) + kv);
+      });
+    });
+    return mapa;
+  }, [ventas, ubicaciones, normalizarNombreUbicacion]);
+
+  // Paginación (10 items por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const TAMANO_PAGINA = 10;
+
+  // Lista unificada de items de inventario:
+  // JALA ESTRICTAMENTE DE DISTRIBUCIÓN EN LIMA (Jabas asignadas en acopios activos menos ventas del puesto)
+  const itemsInventarioConsolidados = useMemo(() => {
+    if (!acopios || acopios.length === 0 || jabasEnLima.length === 0) {
+      return [];
     }
-  };
 
-  // Convertir jabas pendientes de un puesto específico
-  const handleConvertirPuestoABalanza = async (puestoKey) => {
-    const jabasPuesto = jabasPendientesTransformar.filter((j) => j.ubicacionNombre === puestoKey);
-    if (jabasPuesto.length === 0) return;
+    // Agrupar jabas de Lima por puesto + tipoPalta + categoria
+    const agrupado = new Map();
 
-    try {
-      setTransformando(true);
-      setError('');
-      await Promise.all(
-        jabasPuesto.map((j) => ventaService.transformarJabaAKilos(j.jabaId, j.ubicacionId))
-      );
-      setSuccessMsg(`¡Jabas de ${puestoKey} convertidas a Balanza exitosamente!`);
-      setTimeout(() => setSuccessMsg(''), 4000);
-      await cargarInventario();
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.error || 'Error al convertir jabas a balanza.');
-    } finally {
-      setTransformando(false);
-    }
-  };
+    jabasEnLima.forEach((jaba) => {
+      const puesto = jaba.ubicacionNombre;
+      const key = `${puesto}_${jaba.tipoPalta}_${jaba.categoria}`;
+      const kilosJaba = Number(jaba.pesoBruto) || 0;
+      const cantJabas = Number(jaba.cantidadJabas) || 1;
 
-  // Métricas y totales calculados considerando stock en balanza y jabas en Lima
+      if (!agrupado.has(key)) {
+        agrupado.set(key, {
+          inventarioId: `inv-${key}`,
+          ubicacionId: jaba.ubicacionId,
+          ubicacionNombre: puesto,
+          puestoNorm: puesto,
+          tipoPalta: jaba.tipoPalta,
+          categoria: jaba.categoria,
+          pesoBrutoTotal: kilosJaba,
+          cantidadJabas: cantJabas,
+        });
+      } else {
+        const item = agrupado.get(key);
+        item.cantidadJabas += cantJabas;
+        item.pesoBrutoTotal += kilosJaba;
+      }
+    });
+
+    // Descontar las ventas reales de ese puesto y variedad
+    const listaResultante = [];
+    agrupado.forEach((item, key) => {
+      const ventasPuesto = mapaVentasPorPuesto.get(key) || 0;
+      const kilosDisponibles = Math.max(0, item.pesoBrutoTotal - ventasPuesto);
+
+      // Solo incluir si hay stock disponible o si hay jabas físicas asignadas
+      listaResultante.push({
+        ...item,
+        kilos: Number(kilosDisponibles.toFixed(2)),
+      });
+    });
+
+    return listaResultante;
+  }, [acopios, jabasEnLima, mapaVentasPorPuesto]);
+
+  // Métricas y totales calculados estrictamente desde Distribución Lima
   const metricas = useMemo(() => {
-    let totalKilosBalanza = 0;
-    let totalKilosJabas = 0;
-
     const kilosPorPuesto = {
-      'Camara Frio': { balanza: 0, jabas: 0, total: 0, jabasCount: 0 },
-      'Puesto Principal': { balanza: 0, jabas: 0, total: 0, jabasCount: 0 },
-      'Puesto Contingencia': { balanza: 0, jabas: 0, total: 0, jabasCount: 0 },
+      'Camara Frio': { total: 0, jabasCount: 0 },
+      'Puesto Principal': { total: 0, jabasCount: 0 },
+      'Puesto Contingencia': { total: 0, jabasCount: 0 },
     };
 
+    if (!acopios || acopios.length === 0 || itemsInventarioConsolidados.length === 0) {
+      return {
+        totalKilosEmpresa: 0,
+        kilosPorPuesto,
+        variedadesCount: 0,
+      };
+    }
+
     const variedadesPresentes = new Set();
+    let totalKilosEmpresa = 0;
 
-    // 1. Kilos ya en Balanza (inventarios_kilos)
-    inventario.forEach((item) => {
-      const kilos = Number(item.kilosDisponibles ?? item._kilosDisponibles) || 0;
-      totalKilosBalanza += kilos;
+    itemsInventarioConsolidados.forEach((item) => {
+      const kilos = Number(item.kilos) || 0;
+      const cant = Number(item.cantidadJabas) || 0;
+      const norm = item.puestoNorm;
 
-      const norm = normalizarNombreUbicacion(item.ubicacionNombre || item.ubicacionTipo);
       if (kilosPorPuesto[norm]) {
-        kilosPorPuesto[norm].balanza += kilos;
         kilosPorPuesto[norm].total += kilos;
+        kilosPorPuesto[norm].jabasCount += cant;
       }
+
+      totalKilosEmpresa += kilos;
       if (kilos > 0 && item.tipoPalta) {
         variedadesPresentes.add(item.tipoPalta);
       }
     });
 
-    // 2. Kilos en jabas distribuidas que están pendientes de pasar a balanza
-    jabasPendientesTransformar.forEach((jaba) => {
-      const kilos = Number(jaba.pesoBruto) || 0;
-      totalKilosJabas += kilos;
-
-      const norm = jaba.ubicacionNombre;
-      if (kilosPorPuesto[norm]) {
-        kilosPorPuesto[norm].jabas += kilos;
-        kilosPorPuesto[norm].total += kilos;
-        kilosPorPuesto[norm].jabasCount += Number(jaba.cantidadJabas) || 1;
-      }
-      if (kilos > 0 && jaba.tipoPalta) {
-        variedadesPresentes.add(jaba.tipoPalta);
-      }
-    });
-
     return {
-      totalKilosEmpresa: totalKilosBalanza + totalKilosJabas,
-      totalKilosBalanza,
-      totalKilosJabas,
+      totalKilosEmpresa: Number(totalKilosEmpresa.toFixed(2)),
       kilosPorPuesto,
       variedadesCount: variedadesPresentes.size,
-      totalJabasPendientes: jabasPendientesTransformar.length,
     };
-  }, [inventario, jabasPendientesTransformar, normalizarNombreUbicacion]);
+  }, [acopios, itemsInventarioConsolidados]);
 
-  // Lista unificada de items de inventario (Balanza + Jabas en Lima)
+  // Filtrado de items
   const itemsFiltrados = useMemo(() => {
-    // 1. Items de Balanza
-    const balanzaItems = inventario.map((it) => ({
-      ...it,
-      origenTipo: 'Balanza',
-      kilos: Number(it.kilosDisponibles ?? it._kilosDisponibles) || 0,
-      puestoNorm: normalizarNombreUbicacion(it.ubicacionNombre || it.ubicacionTipo),
-    }));
-
-    // 2. Items de Jabas Pendientes
-    const jabasItems = jabasPendientesTransformar.map((j) => ({
-      inventarioId: `jaba-${j.jabaId}`,
-      ubicacionId: j.ubicacionId,
-      ubicacionNombre: j.ubicacionNombre,
-      puestoNorm: j.ubicacionNombre,
-      tipoPalta: j.tipoPalta,
-      categoria: j.categoria,
-      kilos: Number(j.pesoBruto) || 0,
-      origenTipo: 'Jaba',
-      cantidadJabas: j.cantidadJabas,
-      codigoColor: j.codigoColor,
-      jabaId: j.jabaId,
-    }));
-
-    const todos = [...balanzaItems, ...jabasItems];
-
-    return todos.filter((item) => {
-      // Filtro de ubicación
-      if (filtroUbicacion !== 'TODOS') {
-        if (item.puestoNorm !== filtroUbicacion) return false;
+    return itemsInventarioConsolidados.filter((item) => {
+      if (filtroUbicacion !== 'TODOS' && item.puestoNorm !== filtroUbicacion) {
+        return false;
       }
-
-      // Filtro de variedad
-      if (filtroPalta !== 'TODOS') {
-        if (item.tipoPalta !== filtroPalta) return false;
+      if (filtroPalta !== 'TODOS' && item.tipoPalta !== filtroPalta) {
+        return false;
       }
-
-      // Búsqueda por texto
       if (busqueda.trim()) {
         const term = busqueda.toLowerCase().trim();
         const variedadMatch = (item.tipoPalta || '').toLowerCase().includes(term);
@@ -279,12 +254,22 @@ export function InventarioView() {
         const puestoMatch = (item.puestoNorm || '').toLowerCase().includes(term);
         if (!variedadMatch && !categoriaMatch && !puestoMatch) return false;
       }
-
       return true;
     });
-  }, [inventario, jabasPendientesTransformar, filtroUbicacion, filtroPalta, busqueda, normalizarNombreUbicacion]);
+  }, [itemsInventarioConsolidados, filtroUbicacion, filtroPalta, busqueda]);
 
-  // Redirigir a Venta POS con el puesto preseleccionado
+  // Resetear página al filtrar
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroUbicacion, filtroPalta, busqueda]);
+
+  // Paginación
+  const itemsPaginados = useMemo(() => {
+    const start = (paginaActual - 1) * TAMANO_PAGINA;
+    return itemsFiltrados.slice(start, start + TAMANO_PAGINA);
+  }, [itemsFiltrados, paginaActual]);
+
+  // Redirigir a POS con el puesto preseleccionado
   const handleIrAVenta = (ubicacionNorm) => {
     const ubicacionEncontrada = ubicaciones.find(
       (u) => normalizarNombreUbicacion(u.nombre || u.tipo) === ubicacionNorm
@@ -297,7 +282,7 @@ export function InventarioView() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
       {/* 1. Header Corporativo y Resumen */}
-      <div className="bg-white rounded-2xl border border-stone-200/80 p-5 md:p-6 shadow-sm">
+      <div className="bg-white rounded-2xl border border-stone-200/80 p-5 md:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-[#2C221E] text-white flex items-center justify-center shadow-md shrink-0">
@@ -308,12 +293,12 @@ export function InventarioView() {
                 <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
                   Inventario por Puesto
                 </h1>
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-orange-100 text-[#E65100] border border-orange-200">
-                  En Kilos
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-[#E65100] border border-orange-200">
+                  Sincronizado con Distribución Lima
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
-                Supervisión del stock disponible en balanza para los 3 puestos de Lima de {empresaActiva?.nombre || 'JOSBECORSA'}.
+                Kilos disponibles calculados estrictamente a partir de las jabas ubicadas en Lima de {empresaActiva?.nombre || 'JOSBECORSA'}.
               </p>
             </div>
           </div>
@@ -323,16 +308,16 @@ export function InventarioView() {
               type="button"
               onClick={cargarInventario}
               disabled={loading}
-              className="inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-[#2C221E] text-xs font-bold transition-all shadow-xs min-h-[44px] min-w-[44px] disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-[#2C221E] text-xs font-bold transition-all shadow-xs min-h-[44px] disabled:opacity-50 cursor-pointer"
               title="Actualizar inventario"
             >
               <RefreshCw className={`w-4 h-4 text-stone-600 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refrescar Stock</span>
+              <span>Refrescar Stock</span>
             </button>
             <button
               type="button"
               onClick={() => navigate('/ventas')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white text-xs font-bold transition-all shadow-sm min-h-[44px] min-w-[44px] cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white text-xs font-bold transition-all shadow-sm min-h-[44px] cursor-pointer"
             >
               <Scale className="w-4 h-4" />
               <span>Ir a Balanza POS</span>
@@ -340,11 +325,11 @@ export function InventarioView() {
           </div>
         </div>
 
-        {/* Banner de Calidad y Regla de Negocio */}
+        {/* Banner de Regla de Negocio */}
         <div className="mt-4 p-3 rounded-xl bg-[#E8D8C8]/30 border border-[#E8D8C8] flex items-center gap-2.5 text-xs text-[#2C221E]">
           <CheckCircle2 className="w-4 h-4 text-[#E65100] shrink-0" />
           <span>
-            <strong>Regla JOSBECORSA:</strong> El 100% del peso en jabas recibido se traslada íntegramente a kilogramos en inventario disponible sin merma.
+            <strong>Regla JOSBECORSA:</strong> El inventario refleja exactamente las jabas distribuidas en cada puesto en Distribución Lima, descontando las ventas en tiempo real sin merma.
           </span>
         </div>
       </div>
@@ -353,39 +338,10 @@ export function InventarioView() {
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
       {successMsg && <Alert type="success" message={successMsg} onClose={() => setSuccessMsg('')} />}
 
-      {/* 1.1 BANNER DE DETECCIÓN Y CONVERSIÓN DE JABAS EN LIMA */}
-      {metricas.totalKilosJabas > 0 && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-amber-50 border border-amber-300 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-200 text-amber-900 flex items-center justify-center shrink-0">
-              <Box className="w-5 h-5 text-amber-800" />
-            </div>
-            <div>
-              <h3 className="text-sm font-extrabold text-amber-950">
-                📦 {formatearKilos(metricas.totalKilosJabas)} de fruta distribuidas en Lima listas para balanza
-              </h3>
-              <p className="text-xs text-amber-800 mt-0.5">
-                Se detectaron {metricas.totalJabasPendientes} grupos de jabas en los puestos de Lima pendientes de ingresar al inventario de balanza para venta inmediata.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleConvertirTodasABalanza}
-            disabled={transformando}
-            className="px-4 py-2.5 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white font-extrabold text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 min-h-[44px] disabled:opacity-50"
-          >
-            <Scale className="w-4 h-4" />
-            <span>{transformando ? 'Ingresando...' : 'Pasar Todas a Balanza (Kilos) Ahora'}</span>
-          </button>
-        </div>
-      )}
-
       {/* 2. Tarjetas KPI de Stock Total y por Puesto */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* KPI: Stock Total Empresa */}
-        <div className="bg-[#2C221E] text-white rounded-2xl p-4 sm:p-5 shadow-sm border border-stone-800 flex flex-col justify-between">
+        <div className="bg-[#2C221E] text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-stone-800 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-stone-300 uppercase tracking-wider">
               Stock Total Lima
@@ -398,11 +354,8 @@ export function InventarioView() {
             <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               {formatearKilos(metricas.totalKilosEmpresa)}
             </span>
-            <p className="text-xs text-stone-400 mt-1 flex items-center gap-1">
-              <span>{metricas.variedadesCount} variedades activas</span>
-              {metricas.totalKilosJabas > 0 && (
-                <span className="text-amber-400 font-semibold">({formatearKilos(metricas.totalKilosBalanza)} balanza + {formatearKilos(metricas.totalKilosJabas)} en jabas)</span>
-              )}
+            <p className="text-xs text-stone-400 mt-1">
+              {metricas.variedadesCount} variedades activas en Lima
             </p>
           </div>
         </div>
@@ -457,7 +410,7 @@ export function InventarioView() {
           </div>
         </div>
 
-        {/* KPI: Puesto Contingencia (Icono oficial Building2 unificado) */}
+        {/* KPI: Puesto Contingencia */}
         <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-amber-200 flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
@@ -483,14 +436,14 @@ export function InventarioView() {
         </div>
       </div>
 
-      {/* 3. Visión Estructurada de los 3 Puestos de Lima (Cards Operativas) */}
+      {/* 3. Visión Estructurada de los 3 Puestos de Lima */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="text-base sm:text-lg font-extrabold text-[#2C221E] flex items-center gap-2">
             <Building2 className="w-5 h-5 text-[#E65100]" />
             <span>Monitoreo por Puesto Operativo</span>
           </h2>
-          <span className="text-xs text-stone-500 font-medium">3 ubicaciones autorizadas</span>
+          <span className="text-xs text-stone-500 font-medium">3 ubicaciones oficiales</span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -504,11 +457,11 @@ export function InventarioView() {
               descripcion: 'Ubicación física autorizada.',
             };
             const Icon = conf.icono;
-            const puestoInfo = metricas.kilosPorPuesto[ubicacionKey] || { balanza: 0, jabas: 0, total: 0, jabasCount: 0 };
+            const puestoInfo = metricas.kilosPorPuesto[ubicacionKey] || { total: 0, jabasCount: 0 };
             const tieneFruta = puestoInfo.total > 0;
 
             // Variedades presentes en este puesto
-            const itemsEnPuesto = itemsFiltrados.filter((it) => it.puestoNorm === ubicacionKey);
+            const itemsEnPuesto = itemsInventarioConsolidados.filter((it) => it.puestoNorm === ubicacionKey);
             const variedadesMap = {};
             itemsEnPuesto.forEach((it) => {
               if (it.kilos > 0) {
@@ -537,16 +490,10 @@ export function InventarioView() {
 
                   {/* Kilos Totales en el Puesto */}
                   <div className="mt-4 pt-3 border-t border-stone-100 flex items-baseline justify-between">
-                    <span className="text-xs text-stone-500 font-semibold uppercase">Stock Total:</span>
+                    <span className="text-xs text-stone-500 font-semibold uppercase">Stock Disponible:</span>
                     <span className="text-xl font-extrabold text-[#2C221E]">
                       {formatearKilos(puestoInfo.total)}
                     </span>
-                  </div>
-
-                  {/* Desglose Balanza vs Jabas */}
-                  <div className="mt-2 text-[11px] font-semibold text-stone-600 flex justify-between bg-[#FAFAFC] p-2 rounded-lg border border-stone-100">
-                    <span className="text-emerald-700">Balanza: {formatearKilos(puestoInfo.balanza)}</span>
-                    <span className="text-amber-800">En Jabas: {formatearKilos(puestoInfo.jabas)}</span>
                   </div>
 
                   {/* Detalle de Variedades en este Puesto */}
@@ -563,26 +510,14 @@ export function InventarioView() {
                       ))
                     ) : (
                       <div className="p-3 rounded-xl bg-stone-50 border border-dashed border-stone-200 text-center">
-                        <p className="text-xs text-stone-400">Sin stock en este puesto</p>
+                        <p className="text-xs text-stone-400">Sin stock disponible en este puesto</p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Acciones del Puesto */}
-                <div className="space-y-2 pt-3 border-t border-stone-100">
-                  {puestoInfo.jabas > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handleConvertirPuestoABalanza(ubicacionKey)}
-                      disabled={transformando}
-                      className="w-full py-2.5 px-3 rounded-xl bg-white hover:bg-orange-50 text-[#E65100] border border-[#E65100]/40 text-xs font-extrabold flex items-center justify-center gap-2 transition-colors cursor-pointer min-h-[44px]"
-                    >
-                      <Scale className="w-4 h-4" />
-                      <span>Pasar {formatearKilos(puestoInfo.jabas)} de jabas a Balanza</span>
-                    </button>
-                  )}
-
+                {/* Acciones del Puesto: Permite vender desde cualquier puesto con fruta o seleccionarlo */}
+                <div className="pt-3 border-t border-stone-100">
                   <button
                     type="button"
                     onClick={() => handleIrAVenta(ubicacionKey)}
@@ -598,7 +533,7 @@ export function InventarioView() {
         </div>
       </div>
 
-      {/* 4. Tabla Detallada de Inventario Unificado */}
+      {/* 4. Tabla Detallada de Inventario */}
       <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-3">
           <div>
@@ -606,7 +541,7 @@ export function InventarioView() {
               Inventario Detallado de Palta
             </h2>
             <p className="text-xs text-stone-500">
-              Registros consolidados de inventario en balanza y fruta distribuida en Lima.
+              Kilos disponibles por variedad y calidad sincronizados con las jabas distribuidas en Lima.
             </p>
           </div>
 
@@ -636,7 +571,7 @@ export function InventarioView() {
           </div>
         </div>
 
-        {/* Tabla Responsive */}
+        {/* Tabla Responsive Paginada */}
         <div className="overflow-x-auto rounded-xl border border-stone-200">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
@@ -644,20 +579,20 @@ export function InventarioView() {
                 <th className="py-3 px-4">Puesto / Ubicación</th>
                 <th className="py-3 px-4">Variedad</th>
                 <th className="py-3 px-4">Calidad</th>
-                <th className="py-3 px-4">Estado</th>
+                <th className="py-3 px-4">Jabas Asociadas</th>
                 <th className="py-3 px-4 text-right">Kilos Disponibles</th>
                 <th className="py-3 px-4 text-center">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-100">
-              {itemsFiltrados.length === 0 ? (
+              {itemsPaginados.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-8 text-center text-stone-400">
                     No se encontraron registros de palta para los filtros seleccionados.
                   </td>
                 </tr>
               ) : (
-                itemsFiltrados.map((item, idx) => (
+                itemsPaginados.map((item, idx) => (
                   <tr key={item.inventarioId || idx} className="hover:bg-orange-50/30 transition-colors">
                     <td className="py-3 px-4 font-bold text-[#2C221E] flex items-center gap-2">
                       {item.puestoNorm === 'Camara Frio' && <Snowflake className="w-4 h-4 text-[#0288D1]" />}
@@ -672,44 +607,33 @@ export function InventarioView() {
                       {item.categoria}
                     </td>
                     <td className="py-3 px-4">
-                      {item.origenTipo === 'Balanza' ? (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                          Balanza (Listo)
-                        </span>
-                      ) : (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-900 border border-amber-300">
-                          En Jabas ({item.cantidadJabas} und)
-                        </span>
-                      )}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-stone-100 text-stone-700 border border-stone-200">
+                        {item.cantidadJabas} {item.cantidadJabas === 1 ? 'jaba' : 'jabas'}
+                      </span>
                     </td>
                     <td className="py-3 px-4 text-right font-black text-sm text-[#E65100]">
                       {formatearKilos(item.kilos)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      {item.origenTipo === 'Balanza' ? (
-                        <button
-                          type="button"
-                          onClick={() => handleIrAVenta(item.puestoNorm)}
-                          className="px-3 py-1.5 rounded-lg bg-[#2C221E] hover:bg-black text-white text-[11px] font-bold cursor-pointer"
-                        >
-                          Vender
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleConvertirPuestoABalanza(item.puestoNorm)}
-                          className="px-3 py-1.5 rounded-lg bg-[#E65100] hover:bg-[#cf4700] text-white text-[11px] font-bold cursor-pointer flex items-center gap-1 mx-auto"
-                        >
-                          <Scale className="w-3 h-3" />
-                          <span>Pasar a Balanza</span>
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleIrAVenta(item.puestoNorm)}
+                        className="px-3 py-1.5 rounded-lg bg-[#2C221E] hover:bg-black text-white text-[11px] font-bold cursor-pointer"
+                      >
+                        Vender
+                      </button>
                     </td>
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+          <Pagination
+            currentPage={paginaActual}
+            totalItems={itemsFiltrados.length}
+            pageSize={TAMANO_PAGINA}
+            onPageChange={setPaginaActual}
+          />
         </div>
       </div>
     </div>

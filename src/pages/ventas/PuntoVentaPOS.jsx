@@ -21,6 +21,8 @@ import {
   Snowflake,
   AlertTriangle,
   ArrowRight,
+  ShoppingBag,
+  Calendar,
 } from 'lucide-react';
 
 export function PuntoVentaPOS() {
@@ -185,7 +187,7 @@ export function PuntoVentaPOS() {
 
     if (stockDisponible <= 0) {
       setError(
-        `No hay stock disponible en balanza para Palta ${tipoPalta} (${categoria}) en este puesto. Primero traslade jabas a balanza en Distribución Lima o Inventario.`
+        `No hay stock disponible para Palta ${tipoPalta} (${categoria}) en este puesto. Distribuya jabas a este puesto en el módulo de Distribución Lima.`
       );
       return;
     }
@@ -202,7 +204,8 @@ export function PuntoVentaPOS() {
       return;
     }
 
-    // Resolver ID de vendedor válido (garantizando cumplimiento de FK en Postgres)
+    // Resolver ID y nombre de vendedor válido (priorizando usuario activo, ej. Yolanda Salvatierra)
+    const nombreVendedorActivo = user?.nombre || user?.nombreCompleto || 'Yolanda Salvatierra';
     let vendedorUsuarioId = user?.usuarioId;
     if (!vendedorUsuarioId) {
       const vendedorEmpresa = usuariosEmpresa.find((u) => u.usuarioId);
@@ -213,6 +216,8 @@ export function PuntoVentaPOS() {
       empresaId,
       vendedorUsuarioId,
       ubicacionId: ubicacionSeleccionada,
+      metodoPago,
+      nombreVendedor: nombreVendedorActivo,
       detalles: [
         {
           tipoPalta,
@@ -226,6 +231,20 @@ export function PuntoVentaPOS() {
     try {
       setProcessing(true);
       await ventaService.registrarVenta(payloadVenta);
+
+      // Guardar localmente registro del método de pago para auditoría inmediata
+      try {
+        const key = `ventas_metodo_${empresaId}`;
+        const mapMetodos = JSON.parse(localStorage.getItem(key) || '{}');
+        mapMetodos[`${tipoPalta}_${categoria}_${kilosNum}`] = {
+          metodoPago,
+          vendedorNombre: nombreVendedorActivo,
+          fecha: new Date().toISOString(),
+        };
+        localStorage.setItem(key, JSON.stringify(mapMetodos));
+      } catch (e) {
+        console.warn('Cache local metodo venta:', e?.message);
+      }
 
       // Si el método de pago es Fiado, registrar en /api/fiados
       if (metodoPago === 'Fiado') {
@@ -279,8 +298,18 @@ export function PuntoVentaPOS() {
           </p>
         </div>
 
-        {/* Selector de Puesto con Icono Oficial */}
-        <div className="flex items-center gap-3">
+        {/* Selector de Puesto con Icono Oficial y acceso a Paltas Vendidas */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => navigate('/paltas-vendidas')}
+            className="flex items-center gap-2 px-3.5 py-2 bg-stone-100 hover:bg-stone-200 text-[#2C221E] font-bold text-xs rounded-xl border border-stone-300 transition-colors min-h-[44px] cursor-pointer"
+            title="Ver historial de todas las paltas vendidas"
+          >
+            <ShoppingBag className="w-4 h-4 text-[#E65100]" />
+            <span>Paltas Vendidas</span>
+          </button>
+
           <div className="flex items-center gap-2.5 px-3 py-1.5 bg-white border border-stone-300 rounded-xl shadow-xs min-h-[44px]">
             <IconUbicacion className="w-5 h-5 text-[#E65100] shrink-0" />
             <select
@@ -626,6 +655,124 @@ export function PuntoVentaPOS() {
             </Button>
           </div>
         </div>
+      </div>
+
+      {/* Sección Inferior: Ventas Recientes en esta Ubicación (Estrictamente del Día de Hoy) */}
+      <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+          <div className="flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-[#E65100]" />
+            <h3 className="text-sm font-black text-[#2C221E]">
+              Ventas de Hoy ({ubicacionActivaObj?.tipo || ubicacionActivaObj?.nombre || 'Este Puesto'})
+            </h3>
+            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-orange-100 text-[#E65100] border border-orange-200">
+              Reseteo Diario
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/paltas-vendidas')}
+            className="text-xs font-bold text-[#E65100] hover:underline flex items-center gap-1 cursor-pointer"
+          >
+            <span>Ver historial completo de Paltas Vendidas</span>
+            <ArrowRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {(() => {
+          const hoyStr = new Date().toISOString().split('T')[0];
+          // Filtrar estrictamente ventas del día de hoy
+          const ventasHoy = ventasRecientes.filter((v) => {
+            const f = v.fechaVenta || v.createdAt || v.fecha;
+            if (!f) return true; // si fue recién creada en sesión
+            const fStr = new Date(f).toISOString().split('T')[0];
+            return fStr === hoyStr;
+          });
+
+          if (ventasHoy.length === 0) {
+            return (
+              <p className="text-xs text-stone-400 py-3 text-center">
+                Aún no se han registrado ventas el día de hoy en este puesto.
+              </p>
+            );
+          }
+
+          return (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-stone-50 text-stone-500 font-bold uppercase tracking-wider">
+                  <tr>
+                    <th className="py-2.5 px-3">Hora</th>
+                    <th className="py-2.5 px-3">Producto</th>
+                    <th className="py-2.5 px-3 text-right">Kilos</th>
+                    <th className="py-2.5 px-3 text-right">Precio/kg</th>
+                    <th className="py-2.5 px-3 text-right">Total</th>
+                    <th className="py-2.5 px-3 text-center">Método</th>
+                    <th className="py-2.5 px-3">Vendedor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100 font-medium">
+                  {ventasHoy.slice(0, 10).map((v, i) => {
+                    const detalles = v.detalles || v._detalles || [];
+                    const det = detalles[0] || v;
+                    const kilos = Number(det.kilosVendidos || det.kilos || 0);
+                    const precio = Number(det.precioUnitario || det.precio || 0);
+                    const totalCalc = Number(
+                      v.montoTotal ??
+                        v._montoTotal ??
+                        det.subtotal ??
+                        (kilos > 0 && precio > 0 ? kilos * precio : 0)
+                    );
+                    const metodo = v.metodoPago || det.metodoPago || 'Efectivo';
+                    const fechaObj = new Date(v.fechaVenta || v.createdAt || Date.now());
+                    const horaStr = !isNaN(fechaObj)
+                      ? fechaObj.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+                      : '--:--';
+                    const vendedorDisplay =
+                      v.vendedorNombre ||
+                      v.vendedor?.nombre ||
+                      user?.nombre ||
+                      'Yolanda Salvatierra';
+
+                    return (
+                      <tr key={v.ventaId || i} className="hover:bg-stone-50">
+                        <td className="py-2.5 px-3 text-stone-500 font-bold">{horaStr}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#6D4C41]">
+                          Palta {det.tipoPalta || 'Fuerte'} ({det.categoria || '1era'})
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-black text-[#2C221E]">
+                          {formatearKilos(kilos)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-mono text-stone-600">
+                          {formatearMoneda(precio)}
+                        </td>
+                        <td className="py-2.5 px-3 text-right font-black text-[#E65100]">
+                          {formatearMoneda(totalCalc)}
+                        </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                              metodo === 'Fiado'
+                                ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                : metodo === 'Yape'
+                                ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                            }`}
+                          >
+                            {metodo}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3 text-stone-600 font-semibold truncate max-w-[120px]">
+                          {vendedorDisplay}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

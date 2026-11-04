@@ -9,6 +9,7 @@ import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { GastoSeleccionadorModal } from './GastoSeleccionadorModal';
 import { AcopioDetalleModal } from './AcopioDetalleModal';
+import { Pagination } from '../../components/common/Pagination';
 import { formatearFecha, formatearMoneda, formatearKilos } from '../../utils/formatters';
 import {
   Sprout,
@@ -89,6 +90,19 @@ export function AcopioList() {
     const texto = `${a.origen || ''} ${a.encargadoLote || ''} ${a.estado || ''}`.toLowerCase();
     return texto.includes(searchQuery.toLowerCase());
   });
+
+  // Paginación (10 lotes por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const TAMANO_PAGINA = 10;
+
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [searchQuery]);
+
+  const itemsPaginados = acopiosFiltrados.slice(
+    (paginaActual - 1) * TAMANO_PAGINA,
+    paginaActual * TAMANO_PAGINA
+  );
 
   return (
     <div className="space-y-6">
@@ -193,7 +207,7 @@ export function AcopioList() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {acopiosFiltrados.map((item) => {
+                  {itemsPaginados.map((item) => {
                     const cantJabas =
                       item.totalJabas ||
                       item.jabas?.reduce((sum, j) => sum + (Number(j.cantidadJabas) || 0), 0) ||
@@ -263,30 +277,6 @@ export function AcopioList() {
                               Detalle
                             </Button>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleAbrirSeleccionador(item)}
-                              className={
-                                gastoSel
-                                  ? 'text-emerald-700 bg-emerald-50/60 border-emerald-200 hover:bg-emerald-100'
-                                  : 'text-stone-700 hover:text-[#E65100] hover:border-orange-300'
-                              }
-                              title={gastoSel ? 'Modificar datos del seleccionador guardado' : 'Registrar pago a seleccionador'}
-                            >
-                              {gastoSel ? (
-                                <>
-                                  <Edit2 className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-                                  Modificar Sel.
-                                </>
-                              ) : (
-                                <>
-                                  <DollarSign className="w-3.5 h-3.5 mr-1 text-[#E65100]" />
-                                  Seleccionador
-                                </>
-                              )}
-                            </Button>
-
                             <button
                               type="button"
                               onClick={() => handleEliminar(item.acopioId)}
@@ -303,11 +293,18 @@ export function AcopioList() {
                 </tbody>
               </table>
             </div>
+            {/* Paginación Desktop */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={acopiosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+            />
           </div>
 
           {/* Vista de Tarjetas para Smartphones y Tablets Pequeñas (< md) */}
           <div className="md:hidden space-y-3">
-            {acopiosFiltrados.map((item) => {
+            {itemsPaginados.map((item) => {
               const cantJabas =
                 item.totalJabas ||
                 item.jabas?.reduce((sum, j) => sum + (Number(j.cantidadJabas) || 0), 0) ||
@@ -395,29 +392,6 @@ export function AcopioList() {
                       Detalle
                     </Button>
 
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAbrirSeleccionador(item)}
-                      className={`flex-1 font-bold min-h-[44px] ${
-                        gastoSel
-                          ? 'text-emerald-700 bg-emerald-50 border-emerald-300 hover:bg-emerald-100'
-                          : 'text-[#E65100] border-orange-200 hover:bg-orange-50'
-                      }`}
-                    >
-                      {gastoSel ? (
-                        <>
-                          <Edit2 className="w-4 h-4 mr-1 text-emerald-600" />
-                          Modificar
-                        </>
-                      ) : (
-                        <>
-                          <DollarSign className="w-4 h-4 mr-1" />
-                          Pago
-                        </>
-                      )}
-                    </Button>
-
                     <button
                       type="button"
                       onClick={() => handleEliminar(item.acopioId)}
@@ -430,6 +404,14 @@ export function AcopioList() {
                 </div>
               );
             })}
+            {/* Paginación Mobile */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={acopiosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+              className="rounded-2xl"
+            />
           </div>
         </>
       )}

@@ -8,6 +8,8 @@ import { Input } from '../../components/common/Input';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { Modal } from '../../components/common/Modal';
+import { Pagination } from '../../components/common/Pagination';
+import { RegistrarGastoModal } from './RegistrarGastoModal';
 import { formatearMoneda, formatearFecha } from '../../utils/formatters';
 import {
   ReceiptText,
@@ -21,6 +23,7 @@ import {
   Edit2,
   Trash2,
   MapPin,
+  Plus,
 } from 'lucide-react';
 
 const TIPOS_FILTRO = [
@@ -42,6 +45,9 @@ export function GastosOperativos() {
   const [filtroAcopio, setFiltroAcopio] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Modal de registro de nuevo gasto vinculado a un acopio
+  const [modalCrearOpen, setModalCrearOpen] = useState(false);
+
   // Modal de edición de gasto
   const [gastoAEditar, setGastoAEditar] = useState(null);
   const [modalEditOpen, setModalEditOpen] = useState(false);
@@ -52,6 +58,10 @@ export function GastosOperativos() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
+  // Paginación (10 items por página)
+  const [paginaActual, setPaginaActual] = useState(1);
+  const TAMANO_PAGINA = 10;
+
   const cargarDatos = useCallback(async () => {
     if (!empresaId) return;
     try {
@@ -61,8 +71,16 @@ export function GastosOperativos() {
         gastoService.listarGastosPorEmpresa(empresaId),
         acopioService.listarAcopios(empresaId),
       ]);
-      setGastos(listaGastos);
-      setAcopios(listaAcopios);
+      const acopiosArray = Array.isArray(listaAcopios) ? listaAcopios : [];
+      const acopiosActivosIds = new Set(acopiosArray.map((a) => a.acopioId));
+      
+      // Sincronización estricta: Si se eliminó el acopio, sus gastos se ocultan/eliminan de inmediato
+      const gastosValidos = (Array.isArray(listaGastos) ? listaGastos : []).filter(
+        (g) => !g.acopioId || acopiosActivosIds.has(g.acopioId)
+      );
+
+      setGastos(gastosValidos);
+      setAcopios(acopiosArray);
     } catch (err) {
       setError(
         err.response?.data?.message ||
@@ -175,6 +193,16 @@ export function GastosOperativos() {
     return txt.includes(searchQuery.toLowerCase());
   });
 
+  // Resetear página al filtrar
+  useEffect(() => {
+    setPaginaActual(1);
+  }, [filtroTipo, filtroAcopio, searchQuery]);
+
+  const itemsPaginados = gastosFiltrados.slice(
+    (paginaActual - 1) * TAMANO_PAGINA,
+    paginaActual * TAMANO_PAGINA
+  );
+
   // Métricas acumuladas
   const totalInvertido = gastos.reduce((sum, g) => sum + (Number(g.montoTotal) || 0), 0);
   const totalSeleccionador = gastos
@@ -206,15 +234,27 @@ export function GastosOperativos() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={cargarDatos}
-          disabled={loading}
-          className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs self-start sm:self-auto"
-          title="Recargar gastos"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={cargarDatos}
+            disabled={loading}
+            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+            title="Recargar gastos"
+          >
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
+          </button>
+
+          <Button
+            type="button"
+            variant="primary"
+            icon={Plus}
+            onClick={() => setModalCrearOpen(true)}
+            className="bg-[#E65100] hover:bg-[#cf4700] text-white min-h-[44px] shadow-sm"
+          >
+            Registrar Gasto Operativo
+          </Button>
+        </div>
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
@@ -366,7 +406,7 @@ export function GastosOperativos() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-stone-100">
-                  {gastosFiltrados.map((g) => {
+                  {itemsPaginados.map((g) => {
                     const esSel = g.tipoGasto === 'Seleccionador';
                     const esTrans = g.tipoGasto === 'Transporte';
 
@@ -461,11 +501,18 @@ export function GastosOperativos() {
                 </tbody>
               </table>
             </div>
+            {/* Paginación Desktop */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={gastosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+            />
           </div>
 
           {/* Cards para Mobile (< md) */}
           <div className="md:hidden space-y-3">
-            {gastosFiltrados.map((g) => {
+            {itemsPaginados.map((g) => {
               const esSel = g.tipoGasto === 'Seleccionador';
               const esTrans = g.tipoGasto === 'Transporte';
 
@@ -531,6 +578,14 @@ export function GastosOperativos() {
                 </div>
               );
             })}
+            {/* Paginación Mobile */}
+            <Pagination
+              currentPage={paginaActual}
+              totalItems={gastosFiltrados.length}
+              pageSize={TAMANO_PAGINA}
+              onPageChange={setPaginaActual}
+              className="rounded-2xl"
+            />
           </div>
         </>
       )}
@@ -626,6 +681,16 @@ export function GastosOperativos() {
           </div>
         </form>
       </Modal>
+
+      {/* Modal para Registrar Nuevo Gasto Operativo vinculado a un Acopio */}
+      <RegistrarGastoModal
+        isOpen={modalCrearOpen}
+        onClose={() => setModalCrearOpen(false)}
+        acopios={acopios}
+        onSuccess={() => {
+          cargarDatos();
+        }}
+      />
     </div>
   );
 }

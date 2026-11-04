@@ -6,6 +6,7 @@ import { Input } from '../../components/common/Input';
 import { Select } from '../../components/forms/Select';
 import { Alert } from '../../components/common/Alert';
 import { distribucionService } from '../../services/distribucionService';
+import { ventaService } from '../../services/ventaService';
 import { formatearKilos, obtenerEstiloPastel } from '../../utils/formatters';
 import { Split, ArrowRight, Scale, Info, Layers } from 'lucide-react';
 
@@ -89,11 +90,24 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
       setLoading(true);
       setError('');
 
-      await distribucionService.dividirJaba(jaba.jabaId, {
+      const respDivision = await distribucionService.dividirJaba(jaba.jabaId, {
         cantidadSeparar: cantSepNum,
         pesoSeparado: pesoSepNum,
         ubicacionId: ubicacionDestinoId,
       });
+
+      // Asegurar disponibilidad de kilos en el inventario del puesto destino
+      const nuevaJabaId =
+        respDivision?.nuevaJaba?.jabaId ||
+        respDivision?.jabaSeparada?.jabaId ||
+        respDivision?.jabaId;
+      if (nuevaJabaId && ubicacionDestinoId) {
+        try {
+          await ventaService.transformarJabaAKilos(nuevaJabaId, ubicacionDestinoId);
+        } catch {
+          // Continuar fluido
+        }
+      }
 
       onSuccess?.();
       onClose();

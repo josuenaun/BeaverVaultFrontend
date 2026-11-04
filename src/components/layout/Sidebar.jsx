@@ -8,6 +8,7 @@ import {
   Building2,
   Warehouse,
   Scale,
+  ShoppingBag,
   ReceiptText,
   BookOpenCheck,
   Settings,
@@ -28,12 +29,6 @@ const MENU_ITEMS = [
     badge: null,
   },
   {
-    to: '/transporte',
-    label: 'Transporte a Lima',
-    icon: Truck,
-    badge: null,
-  },
-  {
     to: '/distribucion',
     label: 'Distribución Lima',
     icon: Building2,
@@ -49,6 +44,12 @@ const MENU_ITEMS = [
     to: '/ventas',
     label: 'Ventas en Balanza',
     icon: Scale,
+    badge: null,
+  },
+  {
+    to: '/paltas-vendidas',
+    label: 'Paltas Vendidas',
+    icon: ShoppingBag,
     badge: null,
   },
   {

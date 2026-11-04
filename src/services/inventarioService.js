@@ -34,4 +34,20 @@ export const inventarioService = {
     const response = await api.get(`/empresas/${empresaId}/ubicaciones`);
     return response.data?.data || response.data || [];
   },
+
+  /**
+   * Trasladar kilos de inventario entre puestos
+   * (POST /api/inventarios-kilos/trasladar o PATCH /api/ubicaciones/:ubicacionOrigenId/mover-kilos)
+   * @param {Object} data - { ubicacionOrigenId, ubicacionDestinoId, tipoPalta, categoria, kilos, motivo }
+   */
+  async trasladarKilos(data) {
+    try {
+      const response = await api.post('/inventarios-kilos/trasladar', data);
+      return response.data?.data || response.data;
+    } catch {
+      // Intento en endpoint alternativo por ubicación
+      const response = await api.post(`/ubicaciones/${data.ubicacionOrigenId}/mover-kilos`, data);
+      return response.data?.data || response.data;
+    }
+  },
 };
