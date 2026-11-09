@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { acopioService } from '../../services/acopioService';
 import { distribucionService } from '../../services/distribucionService';
-import { ventaService } from '../../services/ventaService';
 import { inventarioService } from '../../services/inventarioService';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
@@ -40,11 +39,17 @@ function JabaCardSimetrica({
   onMover,
   onDividir,
   prefixId = 'lote',
+  esLiquidada = false,
 }) {
   const pastel = obtenerEstiloPastel(jaba.codigoColor);
   const ubicacionActual = ubicacionesDB.find((u) => u.ubicacionId === jaba.ubicacionId);
   const nombreUbicacionActual = ubicacionActual?.tipo || ubicacionActual?.nombre;
   const tieneVariasJabas = Number(jaba.cantidadJabas) > 1;
+  const pesoNumerico = (jaba.pesoActual !== undefined && jaba.pesoActual !== null)
+    ? Number(jaba.pesoActual)
+    : Number(jaba.pesoBruto);
+  const estaAgotada = esLiquidada || pesoNumerico <= 0 || jaba.estado === 'Convertida_Kilos';
+  const pesoRestante = estaAgotada ? 0 : pesoNumerico;
 
   // Todas las ubicaciones disponibles para máxima flexibilidad de movimiento
   const destinosDisponibles = UBICACIONES;
@@ -57,7 +62,9 @@ function JabaCardSimetrica({
         backgroundColor: pastel.backgroundColor,
         borderColor: pastel.borderColor,
       }}
-      className="h-full flex flex-col justify-between rounded-2xl p-4 border shadow-xs hover:shadow-md transition-all space-y-3.5 select-none"
+      className={`h-full flex flex-col justify-between rounded-2xl p-4 border shadow-xs hover:shadow-md transition-all space-y-3.5 select-none ${
+        estaAgotada ? 'opacity-70 saturate-50' : ''
+      }`}
     >
       {/* 1. Cabecera Rígida de 2 Filas */}
       <div className="space-y-1.5">
@@ -113,55 +120,75 @@ function JabaCardSimetrica({
         <span className="font-bold text-stone-700">
           {jaba.cantidadJabas} {Number(jaba.cantidadJabas) === 1 ? 'jaba' : 'jabas'}
         </span>
-        <span className="font-black text-[#E65100] text-sm tracking-tight">
-          {formatearKilos(jaba.pesoBruto)}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className={`font-black text-sm tracking-tight ${estaAgotada ? 'text-stone-500' : 'text-[#E65100]'}`}>
+            {formatearKilos(pesoRestante)}
+          </span>
+          {estaAgotada ? (
+            <span className="text-[10px] text-stone-400 line-through" title="Total inicial vendido">
+              {formatearKilos(jaba.pesoBruto)}
+            </span>
+          ) : Number(jaba.pesoBruto) > pesoRestante ? (
+            <span className="text-[10px] text-stone-400 line-through" title="Peso inicial">
+              {formatearKilos(jaba.pesoBruto)}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       {/* 3. Zona de Acciones Simétricas y Flexibles */}
       <div className="pt-2 border-t border-black/5 space-y-2 mt-auto">
-        {/* Dropdown Mover A (Siempre permite elegir cualquiera de los 3 puestos) */}
-        <div>
-          <label htmlFor={idSelect} className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
-            Reubicar / Mover a:
-          </label>
-          <select
-            id={idSelect}
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value) {
-                onMover(jaba, e.target.value);
-                e.target.value = '';
-              }
-            }}
-            className="w-full h-11 px-3 text-xs sm:text-sm font-bold bg-white border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 text-[#2C221E] outline-hidden cursor-pointer shadow-xs"
-          >
-            <option value="" disabled>
-              📍 Seleccionar destino...
-            </option>
-            {destinosDisponibles.map((ub) => (
-              <option key={ub} value={ub}>
-                {ub === 'Camara Frio' ? '❄️ Cámara Frío' : ub === 'Puesto Principal' ? '🏪 Puesto Principal' : '🏢 Puesto Contingencia'}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Botón Dividir Jabas */}
-        {tieneVariasJabas ? (
-          <button
-            type="button"
-            onClick={() => onDividir(jaba)}
-            className="w-full h-11 px-3 rounded-xl bg-white hover:bg-orange-50 text-[#6D4C41] hover:text-[#E65100] border border-stone-300 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
-            title="Dividir este grupo en jabas separadas"
-          >
-            <Split className="w-4 h-4 text-[#E65100] shrink-0" />
-            <span>Dividir grupo ({jaba.cantidadJabas} jabas)</span>
-          </button>
-        ) : (
-          <div className="h-11 px-3 rounded-xl bg-stone-100/70 border border-stone-200/80 text-stone-400 font-semibold text-xs flex items-center justify-center gap-1 select-none text-center">
-            <span>Jaba individual (1)</span>
+        {estaAgotada ? (
+          <div className="h-11 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 font-bold text-xs flex items-center justify-center gap-1.5 select-none text-center">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span>Stock Liquidado (0.00 kg)</span>
           </div>
+        ) : (
+          <>
+            {/* Dropdown Mover A (Siempre permite elegir cualquiera de los 3 puestos) */}
+            <div>
+              <label htmlFor={idSelect} className="text-[10px] font-bold text-stone-500 uppercase block mb-1">
+                Reubicar / Mover a:
+              </label>
+              <select
+                id={idSelect}
+                defaultValue=""
+                onChange={(e) => {
+                  if (e.target.value) {
+                    onMover(jaba, e.target.value);
+                    e.target.value = '';
+                  }
+                }}
+                className="w-full h-11 px-3 text-xs sm:text-sm font-bold bg-white border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 text-[#2C221E] outline-hidden cursor-pointer shadow-xs"
+              >
+                <option value="" disabled>
+                  📍 Seleccionar destino...
+                </option>
+                {destinosDisponibles.map((ub) => (
+                  <option key={ub} value={ub}>
+                    {ub === 'Camara Frio' ? '❄️ Cámara Frío' : ub === 'Puesto Principal' ? '🏪 Puesto Principal' : '🏢 Puesto Contingencia'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Botón Dividir Jabas */}
+            {tieneVariasJabas ? (
+              <button
+                type="button"
+                onClick={() => onDividir(jaba)}
+                className="w-full h-11 px-3 rounded-xl bg-white hover:bg-orange-50 text-[#6D4C41] hover:text-[#E65100] border border-stone-300 font-bold text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                title="Dividir este grupo en jabas separadas"
+              >
+                <Split className="w-4 h-4 text-[#E65100] shrink-0" />
+                <span>Dividir grupo ({jaba.cantidadJabas} jabas)</span>
+              </button>
+            ) : (
+              <div className="h-11 px-3 rounded-xl bg-stone-100/70 border border-stone-200/80 text-stone-400 font-semibold text-xs flex items-center justify-center gap-1 select-none text-center">
+                <span>Jaba individual (1)</span>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -214,9 +241,10 @@ export function DistribucionView() {
       setAcopios(listaAcopios);
       setInventarioDB(Array.isArray(dataInventario) ? dataInventario : []);
 
-      // Si no hay lote seleccionado y hay acopios, preseleccionar el primero
-      if (listaAcopios.length > 0 && !selectedLoteId) {
-        setSelectedLoteId(listaAcopios[0].acopioId);
+      // Preseleccionar preferentemente un lote que aún tenga stock activo (no liquidado)
+      if (listaAcopios.length > 0 && (!selectedLoteId || !listaAcopios.some((a) => a.acopioId === selectedLoteId))) {
+        const loteActivo = listaAcopios.find((a) => a.estado !== 'Liquidado');
+        setSelectedLoteId(loteActivo ? loteActivo.acopioId : listaAcopios[0].acopioId);
       }
 
       const nuevoMapa = {
@@ -227,13 +255,22 @@ export function DistribucionView() {
 
       // Poblar en las columnas si la jaba tiene asignada esa ubicación físicamente
       listaAcopios.forEach((acopio) => {
+        // Los lotes ya liquidados (100% vendidos) no deben mostrarse en las columnas físicas activas
+        if (acopio.estado === 'Liquidado') return;
+
         const jabas = acopio.jabas || [];
         jabas.forEach((jaba) => {
           const ubicacionObj = listaUbicaciones.find((u) => u.ubicacionId === jaba.ubicacionId);
           const nombreUbicacion = ubicacionObj?.tipo || ubicacionObj?.nombre;
-          if (nombreUbicacion && nuevoMapa[nombreUbicacion]) {
+          const pesoDisp = (jaba.pesoActual !== undefined && jaba.pesoActual !== null)
+            ? Number(jaba.pesoActual)
+            : (Number(jaba.pesoBruto) || 0);
+          
+          // Solo mostrar en las columnas si tiene kilos reales (> 0) y no fue descartada
+          if (nombreUbicacion && nuevoMapa[nombreUbicacion] && pesoDisp > 0 && jaba.estado !== 'Convertida_Kilos' && jaba.estado !== 'Descartada') {
             nuevoMapa[nombreUbicacion].push({
               ...jaba,
+              pesoActual: pesoDisp,
               acopioOrigen: acopio.origen,
               acopioId: acopio.acopioId,
               encargadoLote: acopio.encargadoLote,
@@ -269,13 +306,8 @@ export function DistribucionView() {
     if (ubicacionDestino?.ubicacionId && jaba.jabaId) {
       try {
         await distribucionService.trasladarJaba(jaba.jabaId, ubicacionDestino.ubicacionId);
-        // Sincronización automática de kilos a inventario de base de datos sin merma
-        try {
-          await ventaService.transformarJabaAKilos(jaba.jabaId, ubicacionDestino.ubicacionId);
-        } catch {
-          // Continuar fluido
-        }
-        setSuccessMsg(`Jaba y ${formatearKilos(jaba.pesoBruto)} reubicados en ${destinoUbicacionNombre}.`);
+        const pesoInfo = Number(jaba.pesoActual) > 0 ? Number(jaba.pesoActual) : Number(jaba.pesoBruto);
+        setSuccessMsg(`Jaba y ${formatearKilos(pesoInfo)} reubicados en ${destinoUbicacionNombre}.`);
         setTimeout(() => setSuccessMsg(''), 3000);
       } catch (err) {
         console.warn('Error trasladando jaba en servidor:', err?.message);
@@ -323,19 +355,14 @@ export function DistribucionView() {
       prev.map((a) => (a.acopioId === acopioId ? { ...a, estado: 'Recibido' } : a))
     );
 
-    // Enviar traslados y sincronizaciones en paralelo a la base de datos
+    // Enviar traslados en paralelo a la base de datos
     try {
       await Promise.all(
         jabasDelLote.map(async (j) => {
           await distribucionService.trasladarJaba(j.jabaId, ubicacionDestino.ubicacionId);
-          try {
-            await ventaService.transformarJabaAKilos(j.jabaId, ubicacionDestino.ubicacionId);
-          } catch {
-            // Continuar fluido
-          }
         })
       );
-      setSuccessMsg(`Lote completo distribuido y sincronizado en ${destinoUbicacionNombre}.`);
+      setSuccessMsg(`Lote completo distribuido en ${destinoUbicacionNombre}.`);
       setTimeout(() => setSuccessMsg(''), 3000);
       cargarDatos();
     } catch (err) {
@@ -432,11 +459,16 @@ export function DistribucionView() {
                 onChange={(e) => setSelectedLoteId(e.target.value)}
                 className="h-11 px-3 text-xs sm:text-sm bg-[#FAFAFC] border border-stone-300 rounded-xl focus:bg-white focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 font-bold text-[#2C221E] outline-hidden cursor-pointer"
               >
-                {acopios.map((a) => (
-                  <option key={a.acopioId} value={a.acopioId}>
-                    {a.origen} • {a.encargadoLote} ({a.jabas?.length === 1 ? '1 grupo' : `${a.jabas?.length || 0} grupos`})
-                  </option>
-                ))}
+                {acopios.map((a) => {
+                  const estaLiquidado = a.estado === 'Liquidado';
+                  const pesoRemanente = estaLiquidado ? 0 : (a.totalPesoActual !== undefined ? a.totalPesoActual : a.totalPesoBruto);
+                  return (
+                    <option key={a.acopioId} value={a.acopioId}>
+                      {estaLiquidado ? '✓ [LIQUIDADO] ' : '📦 '}
+                      {a.origen} • {a.encargadoLote} ({a.estado} • {formatearKilos(pesoRemanente || 0)})
+                    </option>
+                  );
+                })}
               </select>
             </div>
           </div>
@@ -465,6 +497,8 @@ export function DistribucionView() {
                         ? 'En_Transito'
                         : acopioSeleccionado.estado === 'Recibido'
                         ? 'Recibido_Lima'
+                        : acopioSeleccionado.estado === 'Liquidado'
+                        ? 'Liquidado'
                         : acopioSeleccionado.estado
                     }
                     size="sm"
@@ -472,23 +506,38 @@ export function DistribucionView() {
                 </div>
 
                 {/* Acciones para distribuir todo el lote a un destino */}
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs font-bold text-stone-600 whitespace-nowrap">
-                    Distribuir todo a:
-                  </span>
-                  {UBICACIONES.map((ub) => (
-                    <button
-                      key={ub}
-                      type="button"
-                      onClick={() => handleMoverLoteCompleto(acopioSeleccionado.acopioId, ub)}
-                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-stone-300 text-[#2C221E] hover:bg-[#E65100] hover:text-white hover:border-[#E65100] transition-all cursor-pointer shadow-xs min-h-[44px]"
-                      title={`Enviar todas las jabas a ${ub}`}
-                    >
-                      {ub}
-                    </button>
-                  ))}
-                </div>
+                {acopioSeleccionado.estado === 'Liquidado' ? (
+                  <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-100 text-emerald-900 border border-emerald-300 font-extrabold text-xs shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>Lote 100% Liquidado (Stock Agotado)</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-stone-600 whitespace-nowrap">
+                      Distribuir todo a:
+                    </span>
+                    {UBICACIONES.map((ub) => (
+                      <button
+                        key={ub}
+                        type="button"
+                        onClick={() => handleMoverLoteCompleto(acopioSeleccionado.acopioId, ub)}
+                        className="px-3.5 py-2 rounded-xl text-xs font-bold bg-white border border-stone-300 text-[#2C221E] hover:bg-[#E65100] hover:text-white hover:border-[#E65100] transition-all cursor-pointer shadow-xs min-h-[44px]"
+                        title={`Enviar todas las jabas a ${ub}`}
+                      >
+                        {ub}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
+
+              {/* Banner informativo si el lote está liquidado */}
+              {acopioSeleccionado.estado === 'Liquidado' && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-800 font-semibold">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Historial: Todas las jabas de este lote han sido vendidas en balanza. No quedan kilos activos en puestos.</span>
+                </div>
+              )}
 
               {/* Lista de jabas del lote con CARDS LIMPIAS */}
               <div>
@@ -505,6 +554,7 @@ export function DistribucionView() {
                       onMover={handleMoverJaba}
                       onDividir={handleAbrirDividir}
                       prefixId="lote"
+                      esLiquidada={acopioSeleccionado.estado === 'Liquidado' || Number(jaba.pesoActual) === 0}
                     />
                   ))}
                 </div>
@@ -552,7 +602,7 @@ export function DistribucionView() {
             // Si la base de datos tiene stock disponible registrado para este puesto (con ventas descontadas), usamos ese valor;
             // de lo contrario sumamos el peso de las jabas
             const stockRealBD = ubicacionObj?.ubicacionId ? stockPorUbicacionDB[ubicacionObj.ubicacionId] : null;
-            const totalKgJabas = items.reduce((acc, curr) => acc + (Number(curr.pesoBruto) || 0), 0);
+            const totalKgJabas = items.reduce((acc, curr) => acc + (Number(curr.pesoActual !== undefined ? curr.pesoActual : curr.pesoBruto) || 0), 0);
             const totalKgColumna = stockRealBD !== undefined && stockRealBD !== null && inventarioDB.length > 0 ? stockRealBD : totalKgJabas;
             const totalJabasColumna = items.reduce((acc, curr) => acc + (Number(curr.cantidadJabas) || 0), 0);
 

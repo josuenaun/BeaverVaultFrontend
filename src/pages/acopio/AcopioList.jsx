@@ -216,6 +216,10 @@ export function AcopioList() {
                       item.totalPesoBruto ||
                       item.jabas?.reduce((sum, j) => sum + (Number(j.pesoBruto) || 0), 0) ||
                       0;
+                    const pesoRestante =
+                      item.totalPesoActual !== undefined
+                        ? item.totalPesoActual
+                        : item.jabas?.reduce((sum, j) => sum + (Number(j.pesoActual !== undefined ? j.pesoActual : j.pesoBruto) || 0), 0) ?? pesoTotal;
                     const gastoSel = item.gastos?.find((g) => g.tipoGasto === 'Seleccionador');
 
                     return (
@@ -253,9 +257,16 @@ export function AcopioList() {
                               <Layers className="w-3 h-3 text-stone-400" />
                               {cantJabas} jabas
                             </span>
-                            <span className="text-[11px] font-bold text-[#E65100]">
-                              {formatearKilos(pesoTotal)}
-                            </span>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[11px] font-bold text-[#E65100]">
+                                {formatearKilos(pesoRestante)}
+                              </span>
+                              {pesoTotal > pesoRestante && (
+                                <span className="text-[10px] text-stone-400 font-semibold" title="Total inicial recibido">
+                                  / {formatearKilos(pesoTotal)}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </td>
                         <td className="px-5 py-4 font-bold text-stone-800">
@@ -313,6 +324,10 @@ export function AcopioList() {
                 item.totalPesoBruto ||
                 item.jabas?.reduce((sum, j) => sum + (Number(j.pesoBruto) || 0), 0) ||
                 0;
+              const pesoRestante =
+                item.totalPesoActual !== undefined
+                  ? item.totalPesoActual
+                  : item.jabas?.reduce((sum, j) => sum + (Number(j.pesoActual !== undefined ? j.pesoActual : j.pesoBruto) || 0), 0) ?? pesoTotal;
               const gastoSel = item.gastos?.find((g) => g.tipoGasto === 'Seleccionador');
 
               return (
@@ -367,9 +382,16 @@ export function AcopioList() {
                       <span className="font-extrabold text-[#2C221E] block">
                         {cantJabas} jabas
                       </span>
-                      <span className="text-[10px] font-bold text-[#E65100]">
-                        {formatearKilos(pesoTotal)}
-                      </span>
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] font-bold text-[#E65100]">
+                          {formatearKilos(pesoRestante)}
+                        </span>
+                        {pesoTotal > pesoRestante && (
+                          <span className="text-[9px] text-stone-400 font-medium">
+                            / {formatearKilos(pesoTotal)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div>
                       <span className="text-[10px] text-stone-400 uppercase font-bold block">

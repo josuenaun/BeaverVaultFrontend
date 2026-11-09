@@ -5,6 +5,7 @@ const VARIANTES = {
   Acopio: 'bg-orange-50 text-[#E65100] border-orange-200 font-bold',
   En_Transito: 'bg-amber-50 text-amber-900 border-amber-300 font-bold',
   Recibido_Lima: 'bg-sky-50 text-[#0288D1] border-sky-300 font-bold',
+  Liquidado: 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold',
   Finalizado: 'bg-stone-100 text-[#2C221E] border-stone-300 font-bold',
 
   // Variantes generales del sistema
@@ -20,6 +21,7 @@ const LABELS = {
   Acopio: 'En Acopio',
   En_Transito: 'En Tránsito',
   Recibido_Lima: 'Recibido en Lima',
+  Liquidado: 'Liquidado',
   Finalizado: 'Finalizado',
 };
 
