@@ -6,10 +6,12 @@ import { ventaService } from '../../services/ventaService';
 import { inventarioService } from '../../services/inventarioService';
 import { acopioService } from '../../services/acopioService';
 import { gastoService } from '../../services/gastoService';
+import { exportService } from '../../services/exportService';
 import { formatearMoneda, formatearKilos, formatearFecha } from '../../utils/formatters';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { Badge } from '../../components/common/Badge';
+import { PeriodFilter } from '../../components/common/PeriodFilter';
 import {
   Sprout,
   Truck,
@@ -27,6 +29,9 @@ import {
   CheckCircle2,
   Boxes,
   Percent,
+  FileSpreadsheet,
+  Download,
+  Calendar,
 } from 'lucide-react';
 
 // Paleta institucional JOSBECORSA para variedades de palta
@@ -114,10 +119,20 @@ export function Dashboard() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [exportMsg, setExportMsg] = useState('');
+  const [exportando, setExportando] = useState(false);
   const [ventas, setVentas] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [acopios, setAcopios] = useState([]);
   const [gastos, setGastos] = useState([]);
+
+  // Estado del periodo contable / operativo seleccionado
+  const [periodoInfo, setPeriodoInfo] = useState({
+    preset: 'ESTE_MES',
+    fechaInicio: '',
+    fechaFin: '',
+    label: 'Este Mes',
+  });
 
   // Carga paralela de todas las entidades del negocio
   const cargarMetricas = useCallback(async () => {
@@ -148,12 +163,39 @@ export function Dashboard() {
     cargarMetricas();
   }, [cargarMetricas]);
 
-  // 1. Cálculos de KPIs Clave
+  // Función utilitaria para filtrar registros por fecha YYYY-MM-DD
+  const dentroDePeriodo = useCallback((fechaStr, inicio, fin) => {
+    if (!inicio && !fin) return true;
+    if (!fechaStr) return true;
+    const ymd = typeof fechaStr === 'string' ? fechaStr.slice(0, 10) : '';
+    if (!ymd) return true;
+    if (inicio && ymd < inicio) return false;
+    if (fin && ymd > fin) return false;
+    return true;
+  }, []);
+
+  // Filtrado reactivo de Ventas según el Periodo Activo
+  const ventasFiltradas = useMemo(() => {
+    return ventas.filter((v) => {
+      const fecha = v.fechaVenta || v.createdAt || v.fecha;
+      return dentroDePeriodo(fecha, periodoInfo.fechaInicio, periodoInfo.fechaFin);
+    });
+  }, [ventas, periodoInfo, dentroDePeriodo]);
+
+  // Filtrado reactivo de Gastos Operativos según el Periodo Activo
+  const gastosFiltrados = useMemo(() => {
+    return gastos.filter((g) => {
+      const fecha = g.fechaCreacion || g.createdAt || g.fecha;
+      return dentroDePeriodo(fecha, periodoInfo.fechaInicio, periodoInfo.fechaFin);
+    });
+  }, [gastos, periodoInfo, dentroDePeriodo]);
+
+  // 1. Cálculos de KPIs Clave del Periodo
   const kpis = useMemo(() => {
     let totalKilosVendidos = 0;
     let totalIngresosVentas = 0;
 
-    ventas.forEach((v) => {
+    ventasFiltradas.forEach((v) => {
       totalIngresosVentas += Number(v.montoTotal) || 0;
       if (Array.isArray(v.detalles)) {
         v.detalles.forEach((d) => {
@@ -166,7 +208,7 @@ export function Dashboard() {
       return acc + (Number(curr.kilosDisponibles) || 0);
     }, 0);
 
-    const totalGastosOperativos = gastos.reduce((acc, curr) => {
+    const totalGastosOperativos = gastosFiltrados.reduce((acc, curr) => {
       return acc + (Number(curr.montoTotal) || 0);
     }, 0);
 
@@ -184,11 +226,12 @@ export function Dashboard() {
       lotesLiquidados,
       lotesActivos,
       totalLotes: acopios.length,
-      totalVentasRealizadas: ventas.length,
+      totalVentasRealizadas: ventasFiltradas.length,
+      totalGastosRealizados: gastosFiltrados.length,
     };
-  }, [ventas, inventario, gastos, acopios]);
+  }, [ventasFiltradas, inventario, gastosFiltrados, acopios]);
 
-  // 2. Análisis por Variedad de Palta (Palta Más Vendida y Gráfico de Anillos)
+  // 2. Análisis por Variedad de Palta en el Periodo
   const analisisVariedades = useMemo(() => {
     const mapa = {
       Fuerte: { tipo: 'Fuerte', kilos: 0, subtotal: 0, conteo: 0 },
@@ -197,7 +240,7 @@ export function Dashboard() {
       Villacampa: { tipo: 'Villacampa', kilos: 0, subtotal: 0, conteo: 0 },
     };
 
-    ventas.forEach((v) => {
+    ventasFiltradas.forEach((v) => {
       if (Array.isArray(v.detalles)) {
         v.detalles.forEach((d) => {
           const t = d.tipoPalta || 'Fuerte';
@@ -235,12 +278,12 @@ export function Dashboard() {
       paltaMasVendida,
       sumaTotalKilos,
     };
-  }, [ventas]);
+  }, [ventasFiltradas]);
 
-  // 3. Ventas por Categoría / Calidad (Gráfico de Barras Horizontal)
+  // 3. Ventas por Categoría / Calidad en el Periodo
   const analisisCalidades = useMemo(() => {
     const mapa = {};
-    ventas.forEach((v) => {
+    ventasFiltradas.forEach((v) => {
       if (Array.isArray(v.detalles)) {
         v.detalles.forEach((d) => {
           const c = d.categoria || 'Sin Categoría';
@@ -261,7 +304,7 @@ export function Dashboard() {
       items,
       maxKilos: maxKilos > 0 ? maxKilos : 1,
     };
-  }, [ventas]);
+  }, [ventasFiltradas]);
 
   // 4. Stock Físico por Puesto en Lima
   const stockPorPuesto = useMemo(() => {
@@ -286,10 +329,68 @@ export function Dashboard() {
     };
   }, [inventario]);
 
-  // 5. Últimas ventas en Balanza
+  // 5. Últimas ventas en Balanza del Periodo
   const ultimasVentas = useMemo(() => {
-    return [...ventas].slice(0, 6);
-  }, [ventas]);
+    return [...ventasFiltradas].slice(0, 6);
+  }, [ventasFiltradas]);
+
+  // Manejador de exportación a Excel (.xlsx multi-hoja)
+  const handleExportarExcel = () => {
+    try {
+      setExportando(true);
+      exportService.exportarExcel({
+        resumen: {
+          periodoLabel: periodoInfo.label,
+          fechaInicio: periodoInfo.fechaInicio,
+          fechaFin: periodoInfo.fechaFin,
+          totalIngresos: kpis.totalIngresosVentas,
+          totalGastos: kpis.totalGastosOperativos,
+          margenOperativo: kpis.margenOperativo,
+          totalKilosVendidos: kpis.totalKilosVendidos,
+          totalStockLima: kpis.totalStockLima,
+        },
+        ventas: ventasFiltradas,
+        gastos: gastosFiltrados,
+        inventario,
+        nombreEmpresa: user?.empresaNombre || 'JOSBECORSA S.A.C.',
+      });
+      setExportMsg('¡Reporte oficial Excel (.xlsx) generado y descargado exitosamente!');
+      setTimeout(() => setExportMsg(''), 5000);
+    } catch (err) {
+      setError('Error al compilar y exportar el libro Excel: ' + (err.message || ''));
+    } finally {
+      setExportando(false);
+    }
+  };
+
+  // Manejador de exportación a CSV con codificación UTF-8
+  const handleExportarCSV = (tipo = 'resumen') => {
+    try {
+      setExportando(true);
+      exportService.exportarCSV({
+        tipo,
+        resumen: {
+          periodoLabel: periodoInfo.label,
+          fechaInicio: periodoInfo.fechaInicio,
+          fechaFin: periodoInfo.fechaFin,
+          totalIngresos: kpis.totalIngresosVentas,
+          totalGastos: kpis.totalGastosOperativos,
+          margenOperativo: kpis.margenOperativo,
+          totalKilosVendidos: kpis.totalKilosVendidos,
+          totalStockLima: kpis.totalStockLima,
+        },
+        ventas: ventasFiltradas,
+        gastos: gastosFiltrados,
+        inventario,
+      });
+      setExportMsg(`¡Archivo plano CSV (${tipo.toUpperCase()}) descargado exitosamente!`);
+      setTimeout(() => setExportMsg(''), 5000);
+    } catch (err) {
+      setError('Error al generar archivo CSV: ' + (err.message || ''));
+    } finally {
+      setExportando(false);
+    }
+  };
 
   // Construcción del Gráfico de Anillos SVG (Donut Chart)
   // Perímetro = 2 * PI * radio (r = 50 -> C = ~314.159)
@@ -356,6 +457,53 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* 1.1 Barra de Filtrado por Periodo y Exportación de Reportes */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-stone-50 border border-stone-200 p-3.5 rounded-2xl shadow-xs">
+        <div className="flex-1">
+          <PeriodFilter onPeriodChange={setPeriodoInfo} initialPreset="ESTE_MES" />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 self-end lg:self-center shrink-0">
+          {/* Botón Exportar Excel */}
+          <button
+            type="button"
+            onClick={handleExportarExcel}
+            disabled={exportando || loading}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-sm hover:shadow transition-all cursor-pointer disabled:opacity-50"
+            title="Exportar libro de trabajo Excel (.xlsx) con 4 hojas"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-200" />
+            <span>Exportar Excel (.xlsx)</span>
+          </button>
+
+          {/* Botón Exportar CSV Resumen */}
+          <button
+            type="button"
+            onClick={() => handleExportarCSV('resumen')}
+            disabled={exportando || loading}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 font-bold text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            title="Descargar archivo plano CSV de resumen"
+          >
+            <Download className="w-4 h-4 text-stone-500" />
+            <span>CSV Resumen</span>
+          </button>
+
+          {/* Botón Exportar CSV Ventas Detalladas */}
+          <button
+            type="button"
+            onClick={() => handleExportarCSV('ventas')}
+            disabled={exportando || loading}
+            className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white hover:bg-stone-100 text-stone-700 border border-stone-300 font-bold text-xs shadow-2xs transition-all cursor-pointer disabled:opacity-50"
+            title="Descargar detalle completo de ventas en CSV"
+          >
+            <Download className="w-4 h-4 text-stone-500" />
+            <span>CSV Ventas</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Alertas de Notificación y Feedback de Exportación */}
+      {exportMsg && <Alert type="success" message={exportMsg} onClose={() => setExportMsg('')} />}
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
       {loading && ventas.length === 0 && inventario.length === 0 ? (
@@ -365,6 +513,16 @@ export function Dashboard() {
         </div>
       ) : (
         <>
+          {/* Subcabecera con resumen del Periodo Activo */}
+          <div className="flex items-center justify-between text-xs text-stone-600 px-1">
+            <span className="font-medium">
+              Periodo activo: <strong className="text-emerald-800 font-bold">{periodoInfo.label}</strong>
+            </span>
+            <span className="text-stone-500">
+              {ventasFiltradas.length} ventas y {gastosFiltrados.length} gastos contabilizados
+            </span>
+          </div>
+
           {/* 2. Grid de KPIs Ejecutivos (5 Tarjetas Principales) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Kilos Vendidos */}
