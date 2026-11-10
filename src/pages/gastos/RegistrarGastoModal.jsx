@@ -15,8 +15,6 @@ import {
   MapPin,
   Calendar,
   Layers,
-  DollarSign,
-  AlertCircle,
   CheckCircle2,
 } from 'lucide-react';
 

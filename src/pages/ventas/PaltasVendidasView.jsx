@@ -1,4 +1,4 @@
-// src/pages/ventas/PaltasVendidasView.jsx - Auditoría y Registro Visual de Paltas Vendidas con Paginación
+// src/pages/ventas/PaltasVendidasView.jsx - Auditoría y Registro Visual de Paltas Vendidas
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,25 +7,18 @@ import { distribucionService } from '../../services/distribucionService';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
-import { Badge } from '../../components/common/Badge';
 import { Pagination } from '../../components/common/Pagination';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { formatearMoneda, formatearKilos, formatearFecha } from '../../utils/formatters';
-import { TIPOS_PALTA, UBICACION_ICONS } from '../../utils/constants';
+import { TIPOS_PALTA } from '../../utils/constants';
 import {
   ShoppingBag,
   Scale,
-  DollarSign,
-  Calendar,
-  Filter,
   Search,
-  RefreshCw,
-  Store,
-  Building2,
-  Snowflake,
-  ArrowRight,
   TrendingUp,
   Receipt,
   User,
+  Boxes,
 } from 'lucide-react';
 
 export function PaltasVendidasView() {
@@ -204,7 +197,7 @@ export function PaltasVendidasView() {
 
       return true;
     });
-  }, [ventasAplanadas, filtroUbicacion, filtroPalta, filtroFecha, busqueda]);
+  }, [ventasAplanadas, filtroUbicacion, filtroPalta, filtroFecha, busqueda, mapaUbicaciones]);
 
   // Resetear a página 1 cuando cambian filtros
   useEffect(() => {
@@ -220,18 +213,26 @@ export function PaltasVendidasView() {
   // Cálculos consolidados para los indicadores clave (KPIs)
   const totales = useMemo(() => {
     let kilos = 0;
-    let dinero = 0;
+    let dineroCobrado = 0;
+    let dineroFiado = 0;
     const desgloseVariedad = {};
 
     ventasFiltradas.forEach((v) => {
       kilos += v.kilosVendidos;
-      dinero += v.subtotal;
+      const esFiado = (v.metodoPago || '').toLowerCase() === 'fiado';
+      if (esFiado) {
+        dineroFiado += v.subtotal;
+      } else {
+        dineroCobrado += v.subtotal;
+      }
       desgloseVariedad[v.tipoPalta] = (desgloseVariedad[v.tipoPalta] || 0) + v.kilosVendidos;
     });
 
     return {
       kilos,
-      dinero,
+      dineroCobrado,
+      dineroFiado,
+      dinero: dineroCobrado,
       totalTransacciones: ventasFiltradas.length,
       desgloseVariedad,
     };
@@ -242,18 +243,18 @@ export function PaltasVendidasView() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Etapa 4: Ventas
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Ventas
             </span>
-            <span className="text-xs text-stone-500 font-semibold">Auditoría Permanente</span>
+            <span className="text-xs text-stone-500 font-semibold">Registro Histórico</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight flex items-center gap-2 mt-1">
-            <ShoppingBag className="w-6 h-6 text-[#E65100]" />
-            Paltas Vendidas
+          <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight flex items-center gap-2">
+            <ShoppingBag className="w-5 h-5 text-[#E65100]" />
+            <span>Paltas Vendidas</span>
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Registro histórico de todos los kilogramos despachados en balanza (año, mes y día).
+            Registro histórico de todos los kilogramos despachados en balanza.
           </p>
         </div>
 
@@ -264,88 +265,90 @@ export function PaltasVendidasView() {
             className="bg-[#E65100] hover:bg-[#cf4700] text-white font-extrabold text-xs h-11 px-4 rounded-xl shadow-xs flex items-center gap-2 cursor-pointer"
           >
             <Scale className="w-4 h-4" />
-            <span>Ir a Balanza POS</span>
+            <span>Nueva Venta</span>
           </Button>
 
-          <button
-            type="button"
-            onClick={cargarDatos}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+          <RefreshButton
+            onRefresh={cargarDatos}
+            loading={loading}
             title="Actualizar registro"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-          </button>
+          />
         </div>
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
-      {/* Tarjetas de Métricas de Ventas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Tarjetas de Métricas de Ventas (Limpias y Homogéneas) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* Total Dinero */}
-        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-              Total Recaudado
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Total Cobrado en Caja
             </span>
-            <p className="text-2xl font-black text-[#E65100] mt-1">
-              {formatearMoneda(totales.dinero)}
+            <p className="text-2xl font-extrabold text-emerald-800 mt-1 tracking-tight">
+              {formatearMoneda(totales.dineroCobrado)}
             </p>
             <span className="text-[11px] text-stone-500">
-              En {totales.totalTransacciones} ventas filtradas
+              {totales.dineroFiado > 0 ? (
+                <span className="text-amber-700 font-bold">
+                  +{formatearMoneda(totales.dineroFiado)} en espera (Fiados)
+                </span>
+              ) : (
+                `${totales.totalTransacciones} ventas filtradas`
+              )}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-orange-50 text-[#E65100] border border-orange-200 flex items-center justify-center shrink-0">
-            <DollarSign className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <Receipt className="w-5 h-5" />
           </div>
         </div>
 
         {/* Total Kilos Despachados */}
-        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
               Kilos Despachados
             </span>
-            <p className="text-2xl font-black text-[#2C221E] mt-1">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-1 tracking-tight">
               {formatearKilos(totales.kilos)}
             </p>
-            <span className="text-[11px] text-emerald-600 font-bold">100% Salida de balanza</span>
+            <span className="text-[11px] text-emerald-700 font-semibold">Salida de balanza</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-            <Scale className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <Scale className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Variedad más vendida */}
-        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-xs flex items-center justify-between">
+        {/* Variedad Fuerte */}
+        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-              Palta Fuerte Vendida
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Palta Fuerte
             </span>
-            <p className="text-2xl font-black text-[#6D4C41] mt-1">
+            <p className="text-2xl font-extrabold text-stone-800 mt-1 tracking-tight">
               {formatearKilos(totales.desgloseVariedad['Fuerte'] || 0)}
             </p>
-            <span className="text-[11px] text-stone-500">Variedad de mayor rotación</span>
+            <span className="text-[11px] text-stone-500">Total despachado</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#E8D8C8]/40 text-[#6D4C41] border border-[#E8D8C8] flex items-center justify-center shrink-0">
-            <TrendingUp className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <Boxes className="w-5 h-5" />
           </div>
         </div>
 
-        {/* Hass y Otras */}
-        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-xs flex items-center justify-between">
+        {/* Variedad Hass */}
+        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-              Palta Hass Vendida
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Palta Hass
             </span>
-            <p className="text-2xl font-black text-[#2C221E] mt-1">
+            <p className="text-2xl font-extrabold text-stone-800 mt-1 tracking-tight">
               {formatearKilos(totales.desgloseVariedad['Hass'] || 0)}
             </p>
-            <span className="text-[11px] text-stone-500">Variedad de exportación</span>
+            <span className="text-[11px] text-stone-500">Total despachado</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-sky-50 text-[#0288D1] border border-sky-200 flex items-center justify-center shrink-0">
-            <Receipt className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -534,7 +537,7 @@ export function PaltasVendidasView() {
                                 : 'bg-emerald-100 text-emerald-900 border-emerald-300'
                             }`}
                           >
-                            {item.metodoPago}
+                            {item.metodoPago === 'Fiado' ? 'Fiado (Por cobrar)' : item.metodoPago}
                           </span>
                         </td>
 

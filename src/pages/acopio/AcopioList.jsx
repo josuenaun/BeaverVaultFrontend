@@ -9,21 +9,20 @@ import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { GastoSeleccionadorModal } from './GastoSeleccionadorModal';
 import { AcopioDetalleModal } from './AcopioDetalleModal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { Pagination } from '../../components/common/Pagination';
 import { formatearFecha, formatearMoneda, formatearKilos } from '../../utils/formatters';
 import {
   Sprout,
   Plus,
   Search,
-  RefreshCw,
-  DollarSign,
   Trash2,
   MapPin,
   User,
   Eye,
   Layers,
   UserCheck,
-  Edit2,
 } from 'lucide-react';
 
 export function AcopioList() {
@@ -40,6 +39,10 @@ export function AcopioList() {
   // Control del modal de detalle de lote y jabas
   const [detalleAcopio, setDetalleAcopio] = useState(null);
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
+
+  // Modal interactivo de confirmación para eliminar lote (sin window.confirm)
+  const [loteAEliminar, setLoteAEliminar] = useState(null);
+  const [eliminandoLote, setEliminandoLote] = useState(false);
 
   const cargarAcopios = useCallback(async () => {
     if (!empresaId) return;
@@ -63,15 +66,17 @@ export function AcopioList() {
     cargarAcopios();
   }, [cargarAcopios]);
 
-  const handleEliminar = async (acopioId) => {
-    if (!window.confirm('¿Está seguro de eliminar este lote de acopio y sus jabas asociadas?')) {
-      return;
-    }
+  const handleConfirmarEliminar = async () => {
+    if (!loteAEliminar?.acopioId) return;
     try {
-      await acopioService.eliminarAcopio(acopioId);
-      cargarAcopios();
+      setEliminandoLote(true);
+      await acopioService.eliminarAcopio(loteAEliminar.acopioId);
+      setLoteAEliminar(null);
+      await cargarAcopios();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al eliminar el lote');
+      setError(err?.response?.data?.message || 'Error al eliminar el lote de acopio.');
+    } finally {
+      setEliminandoLote(false);
     }
   };
 
@@ -109,37 +114,33 @@ export function AcopioList() {
       {/* Cabecera de la vista */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-orange-100 text-[#E65100]">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-orange-100 text-[#E65100]">
               Acopio
             </span>
             <span className="text-xs text-stone-500 font-semibold">Provincia / Campo</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
-            Lotes de Acopio y Jabas
+            Lotes de Acopio
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Registro inicial de fruta en campo, matriz de selección, fletes y liquidación a seleccionadores.
+            Registro inicial de compra en campo, pesaje de jabas y asignación de seleccionadores.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={cargarAcopios}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
-            title="Recargar datos"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-          </button>
+          <RefreshButton
+            onRefresh={cargarAcopios}
+            loading={loading}
+            title="Recargar lotes"
+          />
 
           <Link
             to="/acopio/nuevo"
             className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E65100] hover:bg-[#cf4700] text-white rounded-xl text-xs font-bold transition-all shadow-sm min-h-[44px]"
           >
             <Plus className="w-4 h-4" />
-            <span>Nuevo Lote en Campo</span>
+            <span>Nuevo Lote</span>
           </Link>
         </div>
       </div>
@@ -237,14 +238,23 @@ export function AcopioList() {
                               <span>{item.encargadoLote}</span>
                             </div>
                             {gastoSel ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-[10px] font-bold">
+                              <button
+                                type="button"
+                                onClick={() => handleAbrirSeleccionador(item)}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold cursor-pointer transition-colors"
+                                title="Ver / Editar pago de seleccionador"
+                              >
                                 <UserCheck className="w-3 h-3 text-emerald-600" />
                                 {gastoSel.nombreReceptor} ({formatearMoneda(gastoSel.montoTotal)})
-                              </span>
+                              </button>
                             ) : (
-                              <span className="text-[10px] text-stone-400 font-normal italic">
-                                Sin seleccionador
-                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleAbrirSeleccionador(item)}
+                                className="text-[10px] text-stone-400 hover:text-[#E65100] font-medium hover:underline cursor-pointer"
+                              >
+                                + Asignar seleccionador
+                              </button>
                             )}
                           </div>
                         </td>
@@ -290,7 +300,7 @@ export function AcopioList() {
 
                             <button
                               type="button"
-                              onClick={() => handleEliminar(item.acopioId)}
+                              onClick={() => setLoteAEliminar(item)}
                               className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                               title="Eliminar lote"
                             >
@@ -416,7 +426,7 @@ export function AcopioList() {
 
                     <button
                       type="button"
-                      onClick={() => handleEliminar(item.acopioId)}
+                      onClick={() => setLoteAEliminar(item)}
                       className="p-2.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-stone-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                       title="Eliminar"
                     >
@@ -452,6 +462,19 @@ export function AcopioList() {
         isOpen={modalDetalleOpen}
         onClose={() => setModalDetalleOpen(false)}
         acopio={detalleAcopio}
+      />
+
+      {/* Modal interactivo de Confirmación para Eliminar Lote */}
+      <ConfirmModal
+        isOpen={!!loteAEliminar}
+        onClose={() => setLoteAEliminar(null)}
+        onConfirm={handleConfirmarEliminar}
+        title="¿Eliminar este lote de acopio?"
+        message={`Se eliminará el lote de "${loteAEliminar?.origen || 'origen'}" (Encargado: ${loteAEliminar?.encargadoLote || '-'}) y todas sus jabas asociadas. Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Lote"
+        cancelText="Cancelar"
+        variant="danger"
+        loading={eliminandoLote}
       />
     </div>
   );

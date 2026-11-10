@@ -4,7 +4,6 @@ import { useAuth } from '../../hooks/useAuth';
 import {
   LayoutDashboard,
   Sprout,
-  Truck,
   Building2,
   Warehouse,
   Scale,
@@ -18,7 +17,7 @@ import beaverLogo from '../../assets/beavervault_logo.png';
 const MENU_ITEMS = [
   {
     to: '/dashboard',
-    label: 'Dashboard',
+    label: 'Panel Principal',
     icon: LayoutDashboard,
     badge: null,
   },
@@ -30,7 +29,7 @@ const MENU_ITEMS = [
   },
   {
     to: '/distribucion',
-    label: 'Distribución Lima',
+    label: 'Distribución en Lima',
     icon: Building2,
     badge: null,
   },

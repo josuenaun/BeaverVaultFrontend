@@ -7,7 +7,6 @@ import { Login } from './pages/auth/Login';
 import { Dashboard } from './pages/dashboard/Dashboard';
 import { AcopioList } from './pages/acopio/AcopioList';
 import { AcopioCreate } from './pages/acopio/AcopioCreate';
-import { TransporteList } from './pages/transporte/TransporteList';
 import { DistribucionView } from './pages/distribucion/DistribucionView';
 import { InventarioView } from './pages/inventario/InventarioView';
 import { PuntoVentaPOS } from './pages/ventas/PuntoVentaPOS';

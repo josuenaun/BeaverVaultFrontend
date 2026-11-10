@@ -1,6 +1,6 @@
 // src/components/common/PeriodFilter.jsx - Barra de selección y filtrado por periodos contables y operativos
 import { useState, useEffect } from 'react';
-import { Calendar, Filter, Clock, ChevronDown } from 'lucide-react';
+import { Calendar, Filter } from 'lucide-react';
 import { obtenerFechaHoyPeru } from '../../utils/formatters';
 
 const PRESETS = [
@@ -92,6 +92,7 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
       if (!fechaInicio) setFechaInicio(hoyStr);
       if (!fechaFin) setFechaFin(hoyStr);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preset, hoy]);
 
   // Manejar cambio manual en rango custom

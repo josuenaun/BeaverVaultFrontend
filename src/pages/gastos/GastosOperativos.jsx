@@ -8,12 +8,13 @@ import { Input } from '../../components/common/Input';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { Modal } from '../../components/common/Modal';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { Pagination } from '../../components/common/Pagination';
 import { RegistrarGastoModal } from './RegistrarGastoModal';
 import { formatearMoneda, formatearFecha } from '../../utils/formatters';
 import {
   ReceiptText,
-  RefreshCw,
   Search,
   Filter,
   DollarSign,
@@ -57,6 +58,10 @@ export function GastosOperativos() {
   const [editConcepto, setEditConcepto] = useState('');
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+
+  // Modal interactivo de confirmación para eliminar (evita window.confirm / localhost dice)
+  const [gastoAEliminar, setGastoAEliminar] = useState(null);
+  const [eliminandoGasto, setEliminandoGasto] = useState(false);
 
   // Paginación (10 items por página)
   const [paginaActual, setPaginaActual] = useState(1);
@@ -166,15 +171,21 @@ export function GastosOperativos() {
     }
   };
 
-  const handleEliminarGasto = async (gastoId) => {
-    if (!window.confirm('¿Está seguro de eliminar este registro de gasto operativo?')) {
-      return;
-    }
+  const handleConfirmarEliminar = async () => {
+    if (!gastoAEliminar?.gastoId) return;
     try {
-      await gastoService.eliminarGasto(gastoId);
-      cargarDatos();
+      setEliminandoGasto(true);
+      await gastoService.eliminarGasto(gastoAEliminar.gastoId);
+      setGastoAEliminar(null);
+      await cargarDatos();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error al eliminar el gasto');
+      setError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        'Error al eliminar el gasto operativo.'
+      );
+    } finally {
+      setEliminandoGasto(false);
     }
   };
 
@@ -218,101 +229,101 @@ export function GastosOperativos() {
   return (
     <div className="space-y-6">
       {/* Cabecera */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-[#E8D8C8]/70 text-[#2C221E] border border-[#E8D8C8]">
-              Finanzas Operativas
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+              Finanzas
             </span>
-            <span className="text-xs text-stone-500 font-semibold">Trazabilidad de Gastos</span>
+            <span className="text-xs text-stone-500 font-semibold">Gastos Operativos</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
-            Monitoreo de Gastos Operativos
+            Gastos Operativos
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Liquidación ordenada de Seleccionadores (Campo), Fletes (Transporte) y Cuadrilla de Descarga (Lima).
+            Liquidación de fletes, pago a seleccionadores en campo y cuadrillas de descarga.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={cargarDatos}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+          <RefreshButton
+            onRefresh={cargarDatos}
+            loading={loading}
             title="Recargar gastos"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-          </button>
+          />
 
           <Button
             type="button"
             variant="primary"
             icon={Plus}
             onClick={() => setModalCrearOpen(true)}
-            className="bg-[#E65100] hover:bg-[#cf4700] text-white min-h-[44px] shadow-sm"
+            className="bg-[#E65100] hover:bg-[#cf4700] text-white min-h-[44px] shadow-sm font-bold text-xs"
           >
-            Registrar Gasto Operativo
+            <span>Nuevo Gasto</span>
           </Button>
         </div>
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
-      {/* Tarjetas de Métricas Ejecutivas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs flex items-center justify-between">
+      {/* Tarjetas de Métricas (Limpias y Homogéneas) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
               Total Invertido
             </span>
-            <p className="text-xl font-extrabold text-[#E65100] mt-0.5">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-0.5 tracking-tight">
               {formatearMoneda(totalInvertido)}
             </p>
+            <span className="text-[11px] text-stone-500">Gastos acumulados</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#E65100] flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
             <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
               Seleccionadores
             </span>
-            <p className="text-xl font-extrabold text-[#2C221E] mt-0.5">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-0.5 tracking-tight">
               {formatearMoneda(totalSeleccionador)}
             </p>
+            <span className="text-[11px] text-stone-500">Trabajo en campo</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
               Fletes a Lima
             </span>
-            <p className="text-xl font-extrabold text-[#2C221E] mt-0.5">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-0.5 tracking-tight">
               {formatearMoneda(totalTransporte)}
             </p>
+            <span className="text-[11px] text-stone-500">Transporte de carga</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
             <Truck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
               Descarga / Cuadrilla
             </span>
-            <p className="text-xl font-extrabold text-[#2C221E] mt-0.5">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-0.5 tracking-tight">
               {formatearMoneda(totalDescarga)}
             </p>
+            <span className="text-[11px] text-stone-500">Estiba en mercado</span>
           </div>
-          <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-800 flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
             <PackageCheck className="w-5 h-5" />
           </div>
         </div>
@@ -487,7 +498,7 @@ export function GastosOperativos() {
 
                             <button
                               type="button"
-                              onClick={() => handleEliminarGasto(g.gastoId)}
+                              onClick={() => setGastoAEliminar(g)}
                               className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                               title="Eliminar registro"
                             >
@@ -568,7 +579,7 @@ export function GastosOperativos() {
 
                     <button
                       type="button"
-                      onClick={() => handleEliminarGasto(g.gastoId)}
+                      onClick={() => setGastoAEliminar(g)}
                       className="p-2.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-stone-200 min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
                       title="Eliminar"
                     >
@@ -690,6 +701,19 @@ export function GastosOperativos() {
         onSuccess={() => {
           cargarDatos();
         }}
+      />
+
+      {/* Modal interactivo de Confirmación de Eliminación (reemplaza window.confirm / localhost dice) */}
+      <ConfirmModal
+        isOpen={!!gastoAEliminar}
+        onClose={() => setGastoAEliminar(null)}
+        onConfirm={handleConfirmarEliminar}
+        title="¿Eliminar gasto operativo?"
+        message={`Se eliminará el registro de ${gastoAEliminar?.nombreReceptor || 'este beneficiario'} por ${formatearMoneda(gastoAEliminar?.montoTotal || 0)}. Esta acción no se puede deshacer.`}
+        confirmText="Eliminar Gasto"
+        cancelText="Cancelar"
+        variant="danger"
+        loading={eliminandoGasto}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-// src/pages/inventario/InventarioView.jsx - Módulo de Inventario por Puesto Sincronizado Estrictamente con Distribución Lima
+// src/pages/inventario/InventarioView.jsx - Módulo de Inventario por Puesto en Lima
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -8,18 +8,16 @@ import { ventaService } from '../../services/ventaService';
 import { formatearKilos } from '../../utils/formatters';
 import { UBICACIONES, TIPOS_PALTA } from '../../utils/constants';
 import { Alert } from '../../components/common/Alert';
-import { Spinner } from '../../components/common/Spinner';
 import { Pagination } from '../../components/common/Pagination';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import {
-  Warehouse,
   Scale,
-  RefreshCw,
   Snowflake,
   Store,
   Building2,
   ArrowRight,
-  TrendingUp,
-  CheckCircle2,
+  Boxes,
+  Search,
 } from 'lucide-react';
 
 export function InventarioView() {
@@ -281,56 +279,41 @@ export function InventarioView() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12">
-      {/* 1. Header Corporativo y Resumen */}
-      <div className="bg-white rounded-2xl border border-stone-200/80 p-5 md:p-6 shadow-xs">
+      {/* 1. Header Limpio y Acciones */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 md:p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-[#2C221E] text-white flex items-center justify-center shadow-md shrink-0">
-              <Warehouse className="w-6 h-6 text-[#E65100]" />
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
+                {empresaActiva?.nombre || 'JOSBECORSA'}
+              </span>
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span className="text-xs text-stone-400 font-medium">Lima</span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
-                  Inventario por Puesto
-                </h1>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-100 text-[#E65100] border border-orange-200">
-                  Sincronizado con Distribución Lima
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
-                Kilos disponibles calculados estrictamente a partir de las jabas ubicadas en Lima de {empresaActiva?.nombre || 'JOSBECORSA'}.
-              </p>
-            </div>
+            <h1 className="text-2xl font-extrabold text-[#2C221E] tracking-tight">
+              Inventario por Puesto
+            </h1>
+            <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
+              Kilos disponibles listos para venta en puestos de mercado y cámara de frío.
+            </p>
           </div>
 
           <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-            <button
-              type="button"
-              onClick={cargarInventario}
-              disabled={loading}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-50 text-[#2C221E] text-xs font-bold transition-all shadow-xs min-h-[44px] disabled:opacity-50 cursor-pointer"
+            <RefreshButton
+              onRefresh={cargarInventario}
+              loading={loading}
+              label="Actualizar"
               title="Actualizar inventario"
-            >
-              <RefreshCw className={`w-4 h-4 text-stone-600 ${loading ? 'animate-spin' : ''}`} />
-              <span>Refrescar Stock</span>
-            </button>
+            />
             <button
               type="button"
               onClick={() => navigate('/ventas')}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white text-xs font-bold transition-all shadow-sm min-h-[44px] cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#E65100] hover:bg-[#cf4700] text-white text-xs font-bold transition-all shadow-xs min-h-[44px] cursor-pointer"
             >
               <Scale className="w-4 h-4" />
-              <span>Ir a Balanza POS</span>
+              <span>Vender en Balanza</span>
             </button>
           </div>
-        </div>
-
-        {/* Banner de Regla de Negocio */}
-        <div className="mt-4 p-3 rounded-xl bg-[#E8D8C8]/30 border border-[#E8D8C8] flex items-center gap-2.5 text-xs text-[#2C221E]">
-          <CheckCircle2 className="w-4 h-4 text-[#E65100] shrink-0" />
-          <span>
-            <strong>Regla JOSBECORSA:</strong> El inventario refleja exactamente las jabas distribuidas en cada puesto en Distribución Lima, descontando las ventas en tiempo real sin merma.
-          </span>
         </div>
       </div>
 
@@ -338,70 +321,45 @@ export function InventarioView() {
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
       {successMsg && <Alert type="success" message={successMsg} onClose={() => setSuccessMsg('')} />}
 
-      {/* 2. Tarjetas KPI de Stock Total y por Puesto */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 2. Tarjetas KPI de Stock Total y por Puesto (Limpio y Homogéneo) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
         {/* KPI: Stock Total Empresa */}
-        <div className="bg-[#2C221E] text-white rounded-2xl p-4 sm:p-5 shadow-xs border border-stone-800 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-stone-300 uppercase tracking-wider">
-              Stock Total Lima
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">
+              Stock Total en Lima
             </span>
-            <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-[#E65100]">
-              <TrendingUp className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
+              <Boxes className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+          <div>
+            <span className="text-2xl font-extrabold text-[#2C221E] tracking-tight">
               {formatearKilos(metricas.totalKilosEmpresa)}
             </span>
-            <p className="text-xs text-stone-400 mt-1">
-              {metricas.variedadesCount} variedades activas en Lima
+            <p className="text-xs text-stone-500 mt-1">
+              {metricas.variedadesCount} variedades en almacén
             </p>
           </div>
         </div>
 
-        {/* KPI: Cámara Frío */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-sky-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">
-              Cámara Frío
-            </span>
-            <div className="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-[#0288D1]">
-              <Snowflake className="w-4 h-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-sky-950 tracking-tight">
-              {formatearKilos(metricas.kilosPorPuesto['Camara Frio'].total)}
-            </span>
-            <div className="mt-2 w-full bg-sky-100 h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-sky-500 h-full rounded-full transition-all duration-500"
-                style={{
-                  width: `${metricas.totalKilosEmpresa > 0 ? Math.min(100, (metricas.kilosPorPuesto['Camara Frio'].total / metricas.totalKilosEmpresa) * 100) : 0}%`,
-                }}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* KPI: Puesto Principal */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-emerald-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">
               Puesto Principal
             </span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600">
+            <div className="w-7 h-7 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
               <Store className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-emerald-950 tracking-tight">
+          <div>
+            <span className="text-2xl font-extrabold text-[#2C221E] tracking-tight">
               {formatearKilos(metricas.kilosPorPuesto['Puesto Principal'].total)}
             </span>
-            <div className="mt-2 w-full bg-emerald-100 h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                className="bg-stone-700 h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${metricas.totalKilosEmpresa > 0 ? Math.min(100, (metricas.kilosPorPuesto['Puesto Principal'].total / metricas.totalKilosEmpresa) * 100) : 0}%`,
                 }}
@@ -410,23 +368,48 @@ export function InventarioView() {
           </div>
         </div>
 
+        {/* KPI: Cámara Frío */}
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">
+              Cámara de Frío
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
+              <Snowflake className="w-4 h-4" />
+            </div>
+          </div>
+          <div>
+            <span className="text-2xl font-extrabold text-[#2C221E] tracking-tight">
+              {formatearKilos(metricas.kilosPorPuesto['Camara Frio'].total)}
+            </span>
+            <div className="mt-2 w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
+              <div
+                className="bg-stone-700 h-full rounded-full transition-all duration-500"
+                style={{
+                  width: `${metricas.totalKilosEmpresa > 0 ? Math.min(100, (metricas.kilosPorPuesto['Camara Frio'].total / metricas.totalKilosEmpresa) * 100) : 0}%`,
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
         {/* KPI: Puesto Contingencia */}
-        <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xs border border-amber-200 flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-amber-800 uppercase tracking-wider">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-stone-500 mb-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider">
               Puesto Contingencia
             </span>
-            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700">
+            <div className="w-7 h-7 rounded-lg bg-stone-100 flex items-center justify-center text-stone-700">
               <Building2 className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl font-black text-amber-950 tracking-tight">
+          <div>
+            <span className="text-2xl font-extrabold text-[#2C221E] tracking-tight">
               {formatearKilos(metricas.kilosPorPuesto['Puesto Contingencia'].total)}
             </span>
-            <div className="mt-2 w-full bg-amber-100 h-1.5 rounded-full overflow-hidden">
+            <div className="mt-2 w-full bg-stone-100 h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                className="bg-stone-700 h-full rounded-full transition-all duration-500"
                 style={{
                   width: `${metricas.totalKilosEmpresa > 0 ? Math.min(100, (metricas.kilosPorPuesto['Puesto Contingencia'].total / metricas.totalKilosEmpresa) * 100) : 0}%`,
                 }}
@@ -547,6 +530,17 @@ export function InventarioView() {
 
           {/* Filtros */}
           <div className="flex items-center gap-2 flex-wrap">
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="Buscar por variedad o puesto..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+                className="h-10 pl-8 pr-3 text-xs bg-[#FAFAFC] border border-stone-300 rounded-xl focus:border-[#E65100] outline-hidden"
+              />
+            </div>
+
             <select
               value={filtroUbicacion}
               onChange={(e) => setFiltroUbicacion(e.target.value)}

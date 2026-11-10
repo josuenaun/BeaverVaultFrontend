@@ -1,6 +1,6 @@
 // src/services/exportService.js - Servicio de exportación de reportes a Excel (.xlsx) y CSV
 import * as XLSX from 'xlsx';
-import { formatearMoneda, formatearKilos, formatearFecha } from '../utils/formatters';
+import { formatearFecha } from '../utils/formatters';
 
 export const exportService = {
   /**

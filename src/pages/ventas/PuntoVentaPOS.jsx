@@ -7,6 +7,7 @@ import { distribucionService } from '../../services/distribucionService';
 import { api } from '../../services/api';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { formatearMoneda, formatearKilos } from '../../utils/formatters';
 import { TIPOS_PALTA, MATRIZ_CLASIFICACION, UBICACION_ICONS } from '../../utils/constants';
 import {
@@ -15,14 +16,12 @@ import {
   QrCode,
   BookOpenCheck,
   CheckCircle2,
-  RefreshCw,
   Building2,
   Store,
   Snowflake,
   AlertTriangle,
   ArrowRight,
   ShoppingBag,
-  Calendar,
 } from 'lucide-react';
 
 export function PuntoVentaPOS() {
@@ -251,7 +250,7 @@ export function PuntoVentaPOS() {
         await ventaService.registrarFiado({
           empresaId,
           nombreDeudor: nombreDeudor.trim(),
-          motivoDeuda: `Venta POS: ${kilosNum} kg Palta ${tipoPalta} ${categoria}`,
+          motivoDeuda: `Venta balanza: ${kilosNum} kg Palta ${tipoPalta} ${categoria}`,
           montoDeuda: subtotal,
           fechaAdvertencia,
           creadoPorUsuarioId: vendedorUsuarioId,
@@ -284,17 +283,17 @@ export function PuntoVentaPOS() {
       {/* Cabecera del POS con Iconografía Unificada */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
-              Etapa 4: Ventas
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+              Ventas
             </span>
-            <span className="text-xs text-stone-500 font-semibold">Balanza Mayorista</span>
+            <span className="text-xs text-stone-500 font-semibold">Pesaje en Balanza</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
-            Terminal Punto de Venta en Balanza
+            Venta en Balanza
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Pesaje en tiempo real, facturación por kilos y control estricto sin merma.
+            Pesaje en tiempo real, cálculo de kilos y emisión directa de comprobantes.
           </p>
         </div>
 
@@ -326,18 +325,13 @@ export function PuntoVentaPOS() {
             </select>
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              cargarUbicacionesYVentas();
-              cargarInventarioKilos();
+          <RefreshButton
+            onRefresh={async () => {
+              await Promise.all([cargarUbicacionesYVentas(), cargarInventarioKilos()]);
             }}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+            loading={loading}
             title="Actualizar datos"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-600' : ''}`} />
-          </button>
+          />
         </div>
       </div>
 

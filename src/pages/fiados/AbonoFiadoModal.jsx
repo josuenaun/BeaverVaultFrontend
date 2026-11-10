@@ -4,18 +4,19 @@ import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { formatearMoneda } from '../../utils/formatters';
-import { DollarSign, CheckCircle2, AlertTriangle, User } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarcarMora }) {
-  const montoDeuda = Number(fiado?.montoDeuda) || 0;
-  const totalAbonado = Number(fiado?.montoAbonado) || 0;
-  const saldoPendiente = Math.max(0, montoDeuda - totalAbonado);
+  const saldoPendiente = Number(fiado?.montoDeuda) || 0;
+  const montoTotalOriginal = Number(fiado?.montoTotalOriginal) || saldoPendiente;
+  const totalAbonadoPreviamente = Math.max(0, montoTotalOriginal - saldoPendiente);
 
   const [montoAbonoStr, setMontoAbonoStr] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
   const [nota, setNota] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [confirmarMora, setConfirmarMora] = useState(false);
 
   const montoAbonoNum = parseFloat(montoAbonoStr) || 0;
   const nuevoSaldo = Math.max(0, saldoPendiente - montoAbonoNum);
@@ -64,18 +65,20 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
 
         {/* Tarjeta de Resumen de Deuda */}
         <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
-          <div className="flex justify-between items-center text-xs">
-            <span className="text-stone-500 font-bold">Monto Total de Deuda:</span>
-            <span className="font-mono font-bold text-stone-800">
-              {formatearMoneda(montoDeuda)}
-            </span>
-          </div>
-
-          {totalAbonado > 0 && (
+          {montoTotalOriginal > saldoPendiente && (
             <div className="flex justify-between items-center text-xs">
-              <span className="text-emerald-700 font-bold">Total Abonado Previamente:</span>
+              <span className="text-stone-500 font-bold">Monto Original de la Venta:</span>
+              <span className="font-mono font-bold text-stone-800">
+                {formatearMoneda(montoTotalOriginal)}
+              </span>
+            </div>
+          )}
+
+          {totalAbonadoPreviamente > 0 && (
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-emerald-700 font-bold">Total Abonado a la Fecha:</span>
               <span className="font-mono font-bold text-emerald-700">
-                +{formatearMoneda(totalAbonado)}
+                +{formatearMoneda(totalAbonadoPreviamente)}
               </span>
             </div>
           )}
@@ -98,8 +101,8 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
           <div className="relative">
             <input
               type="number"
-              step="0.50"
-              min="0.5"
+              step="0.10"
+              min="0.10"
               max={saldoPendiente}
               placeholder="0.00"
               value={montoAbonoStr}
@@ -109,10 +112,10 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
             />
             <button
               type="button"
-              onClick={() => setMontoAbonoStr(String(saldoPendiente))}
+              onClick={() => setMontoAbonoStr(saldoPendiente.toFixed(2))}
               className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#E65100] text-[11px] font-black cursor-pointer"
             >
-              Paga Todo (S/. {saldoPendiente.toFixed(2)})
+              Paga Todo ({formatearMoneda(saldoPendiente)})
             </button>
           </div>
         </div>
@@ -162,27 +165,51 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
           />
         </div>
 
+        {/* Confirmación interactiva de Mora */}
+        {confirmarMora && (
+          <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 space-y-2">
+            <p className="text-xs font-bold text-rose-900">
+              ¿Marcar al cliente {fiado?.nombreDeudor} como &quot;En Mora / No Pagó&quot;?
+            </p>
+            <p className="text-[11px] text-rose-700">
+              Se mantendrá el registro de los kilos retirados sin liquidar la deuda.
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onMarcarMora?.(fiado.fiadoId);
+                  onClose();
+                }}
+                className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer shadow-xs"
+              >
+                Confirmar Mora
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmarMora(false)}
+                className="px-3 py-1.5 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold text-xs cursor-pointer hover:bg-stone-50"
+              >
+                Volver
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Acciones */}
         <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-          {/* Marcar como Mora / Incobrable */}
-          <button
-            type="button"
-            onClick={() => {
-              if (
-                window.confirm(
-                  `¿Marcar al cliente ${fiado?.nombreDeudor} como 'En Mora / No Pagó'? Se mantendrá la auditoría de los kilos retirados sin saldar.`
-                )
-              ) {
-                onMarcarMora?.(fiado.fiadoId);
-                onClose();
-              }
-            }}
-            className="text-xs text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer py-1"
-          >
-            Marcar en Mora (No pagó)
-          </button>
+          {/* Botón para solicitar confirmación de Mora */}
+          {!confirmarMora && (
+            <button
+              type="button"
+              onClick={() => setConfirmarMora(true)}
+              className="text-xs text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer py-1"
+            >
+              Marcar en Mora (No pagó)
+            </button>
+          )}
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end ml-auto">
             <Button type="button" variant="secondary" onClick={onClose} className="h-10 text-xs">
               Cancelar
             </Button>

@@ -8,6 +8,7 @@ import { Select } from '../../components/forms/Select';
 import { Alert } from '../../components/common/Alert';
 import { Spinner } from '../../components/common/Spinner';
 import { Modal } from '../../components/common/Modal';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { UBICACIONES } from '../../utils/constants';
 import {
   Building,
@@ -16,7 +17,6 @@ import {
   ShieldCheck,
   UserCog,
   Plus,
-  RefreshCw,
 } from 'lucide-react';
 
 export function ConfiguracionView() {
@@ -177,10 +177,10 @@ export function ConfiguracionView() {
   };
 
   const TABS = [
-    { id: 'empresas', label: 'Empresas (Tenants)', icon: Building, count: empresas.length },
-    { id: 'ubicaciones', label: 'Ubicaciones Físicas', icon: MapPin, count: ubicaciones.length },
-    { id: 'usuarios', label: 'Usuarios de Empresa', icon: Users, count: usuarios.length },
-    { id: 'roles', label: 'Roles de Sistema', icon: ShieldCheck, count: roles.length },
+    { id: 'empresas', label: 'Empresas', icon: Building, count: empresas.length },
+    { id: 'ubicaciones', label: 'Puestos y Almacenes', icon: MapPin, count: ubicaciones.length },
+    { id: 'usuarios', label: 'Usuarios', icon: Users, count: usuarios.length },
+    { id: 'roles', label: 'Roles y Permisos', icon: ShieldCheck, count: roles.length },
     { id: 'superadmins', label: 'Super Administradores', icon: UserCog, count: superAdmins.length },
   ];
 
@@ -189,29 +189,26 @@ export function ConfiguracionView() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-stone-200 text-stone-800">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
               Administración
             </span>
-            <span className="text-xs text-stone-500 font-semibold">Parámetros Globales</span>
+            <span className="text-xs text-stone-500 font-semibold">Parámetros del Sistema</span>
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
             Configuración del Sistema
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Administración de tenants, puntos de venta, accesos de usuarios y roles de seguridad.
+            Administración de empresas, puestos de venta, accesos de usuarios y roles autorizados.
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={cargarDatos}
-          disabled={loading}
-          className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs self-start sm:self-auto"
+        <RefreshButton
+          onRefresh={cargarDatos}
+          loading={loading}
           title="Recargar configuración"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-        </button>
+          className="self-start sm:self-auto"
+        />
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}

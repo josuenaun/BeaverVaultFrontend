@@ -7,23 +7,21 @@ import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { Modal } from '../../components/common/Modal';
 import { Input } from '../../components/common/Input';
+import { ConfirmModal } from '../../components/common/ConfirmModal';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { AbonoFiadoModal } from './AbonoFiadoModal';
 import { Pagination } from '../../components/common/Pagination';
-import { formatearMoneda, formatearFecha, formatearKilos } from '../../utils/formatters';
+import { formatearMoneda, formatearFecha } from '../../utils/formatters';
 import { TIPOS_PALTA } from '../../utils/constants';
 import {
   BookOpenCheck,
   Search,
-  RefreshCw,
   Plus,
   CheckCircle,
   Calendar,
   DollarSign,
   User,
-  Scale,
   AlertTriangle,
-  Receipt,
-  Layers,
 } from 'lucide-react';
 
 export function FiadosList() {
@@ -50,6 +48,9 @@ export function FiadosList() {
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
   const [saving, setSaving] = useState(false);
+  const [fiadoASaldar, setFiadoASaldar] = useState(null);
+  const [saldando, setSaldando] = useState(false);
+  const [errorNuevoFiado, setErrorNuevoFiado] = useState('');
 
   const cargarFiados = useCallback(async () => {
     if (!empresaId) return;
@@ -72,6 +73,26 @@ export function FiadosList() {
   // Manejar abonos parciales
   const handleAbonoSuccess = async ({ fiadoId, montoAbono, metodoPago, nota, esTotal }) => {
     try {
+      // Actualización reactiva inmediata en pantalla: descuenta la deuda al instante
+      setFiados((prev) =>
+        prev
+          .map((f) => {
+            if (f.fiadoId === fiadoId) {
+              const deudaActual = Number(f.montoDeuda) || 0;
+              const nuevoMonto = Math.max(0, deudaActual - montoAbono);
+              if (esTotal || nuevoMonto <= 0) return null;
+              const detalleAbono = `[Abonó ${formatearMoneda(montoAbono)} via ${metodoPago}${nota ? ` - ${nota}` : ''}]`;
+              return {
+                ...f,
+                montoDeuda: nuevoMonto,
+                motivoDeuda: `${f.motivoDeuda || ''} ${detalleAbono}`.trim(),
+              };
+            }
+            return f;
+          })
+          .filter(Boolean)
+      );
+
       await ventaService.registrarAbonoFiado(fiadoId, {
         montoAbono,
         metodoPago,
@@ -82,7 +103,7 @@ export function FiadosList() {
       setSuccessMsg(
         esTotal
           ? '¡Deuda saldada en su totalidad!'
-          : `Abono de ${formatearMoneda(montoAbono)} registrado con éxito.`
+          : `Abono de ${formatearMoneda(montoAbono)} registrado con éxito. Saldo pendiente actualizado.`
       );
       setTimeout(() => setSuccessMsg(''), 4000);
       await cargarFiados();
@@ -105,33 +126,42 @@ export function FiadosList() {
     }
   };
 
-  // Saldar directo
-  const handleSaldarFiado = async (fiadoId) => {
-    if (!window.confirm('¿Confirmar que la totalidad de la deuda ha sido cobrada y saldada?')) return;
+  // Saldar directo interactivo (abre modal de confirmación sin localhost dice)
+  const solicitarSaldarFiado = (fiado) => {
+    setFiadoASaldar(fiado);
+  };
+
+  const ejecutarSaldarFiado = async () => {
+    if (!fiadoASaldar) return;
     try {
-      await ventaService.eliminarFiado(fiadoId);
-      setSuccessMsg('Deuda marcada como pagada y saldada.');
+      setSaldando(true);
+      await ventaService.eliminarFiado(fiadoASaldar.fiadoId);
+      setSuccessMsg(`Deuda de ${fiadoASaldar.nombreDeudor} marcada como cobrada y saldada.`);
       setTimeout(() => setSuccessMsg(''), 4000);
+      setFiadoASaldar(null);
       cargarFiados();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al saldar la deuda.');
+    } finally {
+      setSaldando(false);
     }
   };
 
   // Crear fiado manual
   const handleCrearFiadoManual = async (e) => {
     e.preventDefault();
+    setErrorNuevoFiado('');
     const total = parseFloat(montoTotal);
     const adelanto = parseFloat(adelantoInicial) || 0;
     const netoDeuda = total - adelanto;
 
     if (!nombreDeudor.trim() || isNaN(total) || total <= 0) {
-      alert('Por favor complete los campos obligatorios.');
+      setErrorNuevoFiado('Por favor complete los campos obligatorios (nombre del cliente y monto total válido).');
       return;
     }
 
     if (netoDeuda <= 0) {
-      alert('El adelanto no puede ser mayor o igual al monto total de la venta.');
+      setErrorNuevoFiado('El adelanto no puede ser mayor o igual al monto total de la venta.');
       return;
     }
 
@@ -166,6 +196,7 @@ export function FiadosList() {
       setKilosRetirados('');
       setMontoTotal('');
       setAdelantoInicial('');
+      setErrorNuevoFiado('');
       setSuccessMsg('¡Nuevo fiado registrado con éxito!');
       setTimeout(() => setSuccessMsg(''), 4000);
       cargarFiados();
@@ -232,37 +263,33 @@ export function FiadosList() {
       {/* Cabecera */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-stone-200 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-[#E8D8C8]/60 text-[#2C221E] border border-[#E8D8C8]">
-              Créditos & Balanza
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-stone-100 text-stone-700 border border-stone-200">
+              Créditos
             </span>
             <span className="text-xs text-stone-500 font-semibold">Cuentas por Cobrar</span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight mt-1">
-            Control de Fiados Mayoristas
+          <h1 className="text-xl sm:text-2xl font-black text-[#2C221E] tracking-tight">
+            Control de Fiados
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Seguimiento de kilos retirados al crédito, abonos parciales y clientes con pagos pendientes.
+            Seguimiento de ventas al crédito, abonos parciales y clientes con pagos pendientes.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={cargarFiados}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+          <RefreshButton
+            onRefresh={cargarFiados}
+            loading={loading}
             title="Recargar deudas"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-          </button>
+          />
 
           <Button
             onClick={() => setModalNuevoOpen(true)}
             className="bg-[#E65100] hover:bg-[#cf4700] text-white font-bold min-h-[44px] text-xs shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4 mr-1.5" />
-            Registrar Fiado Directo
+            <span>Nuevo Fiado</span>
           </Button>
         </div>
       </div>
@@ -270,52 +297,52 @@ export function FiadosList() {
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}
       {successMsg && <Alert type="success" message={successMsg} onClose={() => setSuccessMsg('')} />}
 
-      {/* Tarjetas de Métricas de Cobranza */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex items-center justify-between">
+      {/* Tarjetas de Métricas de Cobranza (Limpias y Homogéneas) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
-              Saldo Pendiente por Cobrar
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Saldo Pendiente
             </span>
-            <p className="text-2xl font-black text-[#E65100] mt-1">
+            <p className="text-2xl font-extrabold text-[#E65100] mt-1 tracking-tight">
               {formatearMoneda(metricas.totalPorCobrar)}
             </p>
-            <span className="text-[11px] text-stone-400">Total acumulado en calle</span>
+            <span className="text-[11px] text-stone-500">Por cobrar en balanza</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-orange-100 text-[#E65100] flex items-center justify-center font-bold shrink-0">
-            <DollarSign className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <DollarSign className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
-              Cuentas / Clientes Activos
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              Clientes con Deuda
             </span>
-            <p className="text-2xl font-black text-[#2C221E] mt-1">
+            <p className="text-2xl font-extrabold text-[#2C221E] mt-1 tracking-tight">
               {metricas.totalClientes} clientes
             </p>
-            <span className="text-[11px] text-emerald-600 font-bold">Kilos retirados de balanza</span>
+            <span className="text-[11px] text-stone-500">Cuentas activas</span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-[#6D4C41] text-white flex items-center justify-center font-bold shrink-0">
-            <BookOpenCheck className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center shrink-0">
+            <BookOpenCheck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl p-5 border border-stone-200 shadow-xs flex items-center justify-between">
+        <div className="bg-white rounded-2xl p-4 border border-stone-200 shadow-2xs flex items-center justify-between">
           <div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-500">
-              En Mora / Retiró sin Pagar
+            <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+              En Observación / Mora
             </span>
-            <p className="text-2xl font-black text-rose-700 mt-1">
+            <p className="text-2xl font-extrabold text-rose-700 mt-1 tracking-tight">
               {formatearMoneda(metricas.totalEnMora)}
             </p>
             <span className="text-[11px] text-rose-600 font-semibold">
-              {metricas.clientesEnMoraCount} clientes observados
+              {metricas.clientesEnMoraCount} {metricas.clientesEnMoraCount === 1 ? 'cliente observado' : 'clientes observados'}
             </span>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center font-bold shrink-0">
-            <AlertTriangle className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 flex items-center justify-center shrink-0">
+            <AlertTriangle className="w-5 h-5" />
           </div>
         </div>
       </div>
@@ -457,7 +484,7 @@ export function FiadosList() {
                           {/* Botón de Saldar Deuda Completa */}
                           <Button
                             size="sm"
-                            onClick={() => handleSaldarFiado(item.fiadoId)}
+                            onClick={() => solicitarSaldarFiado(item)}
                             className="bg-[#2C221E] hover:bg-black text-white font-bold text-xs"
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1" />
@@ -483,11 +510,16 @@ export function FiadosList() {
       {/* Modal Registrar Fiado Directo */}
       <Modal
         isOpen={modalNuevoOpen}
-        onClose={() => setModalNuevoOpen(false)}
+        onClose={() => {
+          setModalNuevoOpen(false);
+          setErrorNuevoFiado('');
+        }}
         title="Registrar Fiado Directo"
         subtitle="Venta al crédito con descuento automático de kilos en inventario"
       >
         <form onSubmit={handleCrearFiadoManual} className="space-y-4">
+          {errorNuevoFiado && <Alert type="error" message={errorNuevoFiado} />}
+
           <Input
             label="Nombre del Cliente (Deudor)"
             name="nombreDeudor"
@@ -599,6 +631,21 @@ export function FiadosList() {
           onMarcarMora={handleMarcarMora}
         />
       )}
+
+      {/* Modal de confirmación para saldar deuda */}
+      <ConfirmModal
+        isOpen={Boolean(fiadoASaldar)}
+        onClose={() => {
+          if (!saldando) setFiadoASaldar(null);
+        }}
+        onConfirm={ejecutarSaldarFiado}
+        title="Confirmar Cobro y Saldo de Deuda"
+        message={`¿Confirmar que la totalidad de la deuda de "${fiadoASaldar?.nombreDeudor || 'este cliente'}" por un monto de ${formatearMoneda(fiadoASaldar?.montoDeuda || 0)} ha sido cobrada y saldada?`}
+        confirmText="Sí, saldar deuda"
+        cancelText="Cancelar"
+        variant="success"
+        loading={saldando}
+      />
     </div>
   );
 }

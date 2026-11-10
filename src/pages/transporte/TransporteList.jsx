@@ -8,10 +8,10 @@ import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { FleteModal } from './FleteModal';
 import { Pagination } from '../../components/common/Pagination';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { formatearFecha, formatearMoneda } from '../../utils/formatters';
 import {
   Truck,
-  RefreshCw,
   Search,
   MapPin,
   DollarSign,
@@ -100,15 +100,12 @@ export function TransporteList() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={cargarDatos}
-          disabled={loading}
-          className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs self-start sm:self-auto"
+        <RefreshButton
+          onRefresh={cargarDatos}
+          loading={loading}
           title="Recargar datos"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-        </button>
+          className="self-start sm:self-auto"
+        />
       </div>
 
       {error && <Alert type="error" message={error} onClose={() => setError('')} />}

@@ -84,19 +84,17 @@ export const ventaService = {
    */
   async registrarAbonoFiado(fiadoId, data) {
     try {
-      const response = await api.post(`/fiados/${fiadoId}/abonos`, data);
+      const response = await api.patch(`/fiados/${fiadoId}`, data);
       return response.data?.data || response.data;
     } catch {
-      // Fallback a PATCH /api/fiados/:fiadoId
       try {
-        const response = await api.patch(`/fiados/${fiadoId}`, data);
+        const response = await api.post(`/fiados/${fiadoId}/abonos`, data);
         return response.data?.data || response.data;
-      } catch {
-        // Si no soporta backend, si es total saldar con delete
+      } catch (err) {
         if (data.esTotal) {
           return await this.eliminarFiado(fiadoId);
         }
-        return { success: true };
+        throw err;
       }
     }
   },

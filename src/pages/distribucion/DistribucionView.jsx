@@ -4,17 +4,15 @@ import { useAuth } from '../../hooks/useAuth';
 import { acopioService } from '../../services/acopioService';
 import { distribucionService } from '../../services/distribucionService';
 import { inventarioService } from '../../services/inventarioService';
-import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
 import { GastoDescargaModal } from './GastoDescargaModal';
 import { DividirJabaModal } from './DividirJabaModal';
+import { RefreshButton } from '../../components/common/RefreshButton';
 import { formatearKilos, formatearMoneda, formatearFecha, obtenerEstiloPastel } from '../../utils/formatters';
 import { UBICACIONES, UBICACION_ICONS } from '../../utils/constants';
 import {
   Building2,
-  RefreshCw,
-  PackageCheck,
   Truck,
   MapPin,
   Split,
@@ -415,15 +413,11 @@ export function DistribucionView() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={cargarDatos}
-            disabled={loading}
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer shadow-xs"
+          <RefreshButton
+            onRefresh={cargarDatos}
+            loading={loading}
             title="Recargar inventario"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-[#E65100]' : ''}`} />
-          </button>
+          />
         </div>
       </div>
 
@@ -464,7 +458,7 @@ export function DistribucionView() {
                   const pesoRemanente = estaLiquidado ? 0 : (a.totalPesoActual !== undefined ? a.totalPesoActual : a.totalPesoBruto);
                   return (
                     <option key={a.acopioId} value={a.acopioId}>
-                      {estaLiquidado ? '✓ [LIQUIDADO] ' : '📦 '}
+                      {estaLiquidado ? '[LIQUIDADO] ' : ''}
                       {a.origen} • {a.encargadoLote} ({a.estado} • {formatearKilos(pesoRemanente || 0)})
                     </option>
                   );
@@ -527,6 +521,16 @@ export function DistribucionView() {
                         {ub}
                       </button>
                     ))}
+
+                    <button
+                      type="button"
+                      onClick={() => handleAbrirDescarga(acopioSeleccionado)}
+                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 transition-colors shadow-2xs min-h-[44px] flex items-center gap-1.5 cursor-pointer ml-auto"
+                      title="Registrar pago a estibadores o cuadrilla de descarga"
+                    >
+                      <Truck className="w-3.5 h-3.5 text-stone-600" />
+                      <span>Pago Descarga</span>
+                    </button>
                   </div>
                 )}
               </div>

@@ -2,12 +2,11 @@
 import { useState, useMemo } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
-import { Select } from '../../components/forms/Select';
 import { Alert } from '../../components/common/Alert';
 import { inventarioService } from '../../services/inventarioService';
 import { formatearKilos } from '../../utils/formatters';
 import { TIPOS_PALTA, MATRIZ_CLASIFICACION } from '../../utils/constants';
-import { ArrowRight, Scale, Store, Building2, Snowflake, CheckCircle2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 
 export function TrasladarKilosModal({
   isOpen,
