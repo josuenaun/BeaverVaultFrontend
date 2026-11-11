@@ -10,8 +10,6 @@ export const MATRIZ_CLASIFICACION = {
 
 export const TIPOS_PALTA = Object.keys(MATRIZ_CLASIFICACION);
 
-export const COLORES_JABA = ['Rojo', 'Azul', 'Verde', 'Amarillo', 'Negro', 'Blanco', 'Naranja'];
-
 export const PALETA_COLORES_JABA = [
   { nombre: 'Verde Campo', hex: '#10B981' },
   { nombre: 'Azul Real', hex: '#2563EB' },
@@ -34,11 +32,4 @@ export const UBICACION_ICONS = {
   'Camara Frio': Snowflake,
   'Puesto Principal': Store,
   'Puesto Contingencia': Building2,
-};
-
-export const ESTADOS_LOTE = {
-  ACOPIO: 'Acopio',
-  EN_TRANSITO: 'En_Transito',
-  RECIBIDO_LIMA: 'Recibido_Lima',
-  FINALIZADO: 'Finalizado',
 };

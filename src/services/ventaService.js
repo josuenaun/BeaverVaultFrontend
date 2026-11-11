@@ -3,17 +3,6 @@ import { api } from './api';
 
 export const ventaService = {
   /**
-   * Convertir jaba a kilogramos en inventario (¡Sin Merma!)
-   * (POST /api/jabas/:jabaId/transformar-kilos)
-   * @param {string} jabaId
-   * @param {string} ubicacionId
-   */
-  async transformarJabaAKilos(jabaId, ubicacionId) {
-    const response = await api.post(`/jabas/${jabaId}/transformar-kilos`, { ubicacionId });
-    return response.data?.data || response.data;
-  },
-
-  /**
    * Obtener inventario disponible en kilos por ubicación física
    * (GET /api/ubicaciones/:ubicacionId/inventario-kilos)
    * @param {string} ubicacionId
@@ -70,17 +59,39 @@ export const ventaService = {
    * Eliminar o saldar fiado
    * (DELETE /api/fiados/:fiadoId)
    * @param {string} fiadoId
+   * @param {Object} [params] - { ventaId, metodoPago }
    */
-  async eliminarFiado(fiadoId) {
-    const response = await api.delete(`/fiados/${fiadoId}`);
+  async eliminarFiado(fiadoId, params = {}) {
+    const query = new URLSearchParams();
+    if (params.ventaId) query.append('ventaId', params.ventaId);
+    if (params.metodoPago) query.append('metodoPago', params.metodoPago);
+    const queryString = query.toString() ? `?${query.toString()}` : '';
+
+    const response = await api.delete(`/fiados/${fiadoId}${queryString}`);
     return response.data;
+  },
+
+  /**
+   * Actualizar método de pago de una venta
+   * (PATCH /api/ventas/:ventaId/metodo-pago)
+   * @param {string} ventaId
+   * @param {string} metodoPago
+   */
+  async actualizarMetodoPagoVenta(ventaId, metodoPago) {
+    try {
+      const response = await api.patch(`/ventas/${ventaId}/metodo-pago`, { metodoPago });
+      return response.data?.data || response.data;
+    } catch (err) {
+      console.warn('No se pudo actualizar método de pago en servidor:', err?.message);
+      return null;
+    }
   },
 
   /**
    * Registrar abono parcial de un fiado
    * (POST /api/fiados/:fiadoId/abonos o PATCH /api/fiados/:fiadoId)
    * @param {string} fiadoId
-   * @param {Object} data - { montoAbono, metodoPago, nota, esTotal }
+   * @param {Object} data - { montoAbono, metodoPago, nota, esTotal, ventaId }
    */
   async registrarAbonoFiado(fiadoId, data) {
     try {
@@ -92,7 +103,7 @@ export const ventaService = {
         return response.data?.data || response.data;
       } catch (err) {
         if (data.esTotal) {
-          return await this.eliminarFiado(fiadoId);
+          return await this.eliminarFiado(fiadoId, { ventaId: data.ventaId, metodoPago: data.metodoPago });
         }
         throw err;
       }

@@ -72,6 +72,7 @@ export function Dashboard() {
 
   // Datos sin procesar
   const [ventas, setVentas] = useState([]);
+  const [fiados, setFiados] = useState([]);
   const [inventario, setInventario] = useState([]);
   const [acopios, setAcopios] = useState([]);
   const [gastos, setGastos] = useState([]);
@@ -104,14 +105,16 @@ export function Dashboard() {
       setLoading(true);
       setError('');
 
-      const [resVentas, resInventario, resAcopios, resGastos] = await Promise.all([
+      const [resVentas, resInventario, resAcopios, resGastos, resFiados] = await Promise.all([
         ventaService.listarVentas(empresaId).catch(() => []),
         inventarioService.listarInventarioPorEmpresa(empresaId).catch(() => []),
         acopioService.listarAcopios(empresaId).catch(() => []),
         gastoService.listarGastosPorEmpresa(empresaId).catch(() => []),
+        ventaService.listarFiados(empresaId).catch(() => []),
       ]);
 
       setVentas(Array.isArray(resVentas) ? resVentas : []);
+      setFiados(Array.isArray(resFiados) ? resFiados : []);
       setInventario(Array.isArray(resInventario) ? resInventario : []);
       setAcopios(Array.isArray(resAcopios) ? resAcopios : []);
       setGastos(Array.isArray(resGastos) ? resGastos : []);
@@ -154,6 +157,31 @@ export function Dashboard() {
     });
   }, [gastos, periodoInfo, dentroDePeriodo]);
 
+  // Total de saldo pendiente real consultando la cartera de fiados activa
+  const saldoPendienteFiadosReal = useMemo(
+    () => fiados.reduce((acc, f) => acc + (Number(f.montoDeuda) || 0), 0),
+    [fiados]
+  );
+
+  // Resolver etiqueta visual y estado real de pago considerando fiados liquidados
+  const resolverMetodoPagoDashboard = useCallback(
+    (metodoRaw) => {
+      const met = (metodoRaw || 'Efectivo').trim();
+      const lower = met.toLowerCase();
+      if (lower === 'fiado (pagado)' || lower.includes('pagado')) {
+        return { label: 'Fiado (Pagado)', esPendiente: false, esFiadoPagado: true };
+      }
+      if (lower === 'fiado') {
+        if (saldoPendienteFiadosReal <= 0) {
+          return { label: 'Fiado (Pagado)', esPendiente: false, esFiadoPagado: true };
+        }
+        return { label: 'Fiado (Por cobrar)', esPendiente: true, esFiadoPagado: false };
+      }
+      return { label: met, esPendiente: false, esFiadoPagado: false };
+    },
+    [saldoPendienteFiadosReal]
+  );
+
   // 1. Cálculos de Indicadores Principales
   const kpis = useMemo(() => {
     let totalKilosVendidos = 0;
@@ -165,8 +193,8 @@ export function Dashboard() {
       const monto = Number(v.montoTotal) || 0;
       totalFacturado += monto;
 
-      const esFiado = (v.metodoPago || '').toLowerCase() === 'fiado';
-      if (esFiado) {
+      const estadoPago = resolverMetodoPagoDashboard(v.metodoPago);
+      if (estadoPago.esPendiente) {
         totalFiadosEnEspera += monto;
       } else {
         totalIngresosCobrados += monto;
@@ -178,6 +206,12 @@ export function Dashboard() {
         });
       }
     });
+
+    if (saldoPendienteFiadosReal > 0 && totalFiadosEnEspera > saldoPendienteFiadosReal) {
+      const yaCobradoDeFiados = totalFiadosEnEspera - saldoPendienteFiadosReal;
+      totalIngresosCobrados += yaCobradoDeFiados;
+      totalFiadosEnEspera = saldoPendienteFiadosReal;
+    }
 
     const totalStockLima = inventario.reduce((acc, curr) => {
       return acc + (Number(curr.kilosDisponibles) || 0);
@@ -214,7 +248,7 @@ export function Dashboard() {
       totalVentasRealizadas: ventasFiltradas.length,
       totalGastosRealizados: gastosFiltrados.length,
     };
-  }, [ventasFiltradas, inventario, gastosFiltrados, acopios]);
+  }, [ventasFiltradas, inventario, gastosFiltrados, acopios, saldoPendienteFiadosReal, resolverMetodoPagoDashboard]);
 
   // 2. Análisis por Variedad de Palta
   const analisisVariedades = useMemo(() => {
@@ -1198,9 +1232,22 @@ export function Dashboard() {
                             {formatearMoneda(venta.montoTotal)}
                           </td>
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-stone-100 text-stone-700 border border-stone-200">
-                              {venta.metodoPago || 'Efectivo'}
-                            </span>
+                            {(() => {
+                              const infoPago = resolverMetodoPagoDashboard(venta.metodoPago);
+                              return (
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                    infoPago.esPendiente
+                                      ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                      : infoPago.esFiadoPagado
+                                      ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                      : 'bg-stone-100 text-stone-700 border-stone-200'
+                                  }`}
+                                >
+                                  {infoPago.label}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="py-2.5 px-3 text-center whitespace-nowrap">
                             <button

@@ -7,12 +7,11 @@ import { Badge } from '../../components/common/Badge';
 import { Button } from '../../components/common/Button';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
-import { GastoSeleccionadorModal } from './GastoSeleccionadorModal';
 import { AcopioDetalleModal } from './AcopioDetalleModal';
 import { ConfirmModal } from '../../components/common/ConfirmModal';
 import { RefreshButton } from '../../components/common/RefreshButton';
 import { Pagination } from '../../components/common/Pagination';
-import { formatearFecha, formatearMoneda, formatearKilos } from '../../utils/formatters';
+import { formatearFecha, formatearKilos } from '../../utils/formatters';
 import {
   Sprout,
   Plus,
@@ -22,7 +21,6 @@ import {
   User,
   Eye,
   Layers,
-  UserCheck,
 } from 'lucide-react';
 
 export function AcopioList() {
@@ -31,10 +29,6 @@ export function AcopioList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Control del modal de seleccionador
-  const [selectedAcopio, setSelectedAcopio] = useState(null);
-  const [modalSeleccionadorOpen, setModalSeleccionadorOpen] = useState(false);
 
   // Control del modal de detalle de lote y jabas
   const [detalleAcopio, setDetalleAcopio] = useState(null);
@@ -80,11 +74,6 @@ export function AcopioList() {
     }
   };
 
-  const handleAbrirSeleccionador = (acopio) => {
-    setSelectedAcopio(acopio);
-    setModalSeleccionadorOpen(true);
-  };
-
   const handleAbrirDetalle = (acopio) => {
     setDetalleAcopio(acopio);
     setModalDetalleOpen(true);
@@ -124,7 +113,7 @@ export function AcopioList() {
             Lotes de Acopio
           </h1>
           <p className="text-xs text-stone-500 mt-0.5">
-            Registro inicial de compra en campo, pesaje de jabas y asignación de seleccionadores.
+            Registro inicial de compra en campo y control de pesaje de jabas.
           </p>
         </div>
 
@@ -202,7 +191,6 @@ export function AcopioList() {
                     <th className="px-5 py-3.5">Encargado</th>
                     <th className="px-5 py-3.5">Fecha Acopio</th>
                     <th className="px-5 py-3.5">Jabas & Kilos</th>
-                    <th className="px-5 py-3.5">Flete Pactado</th>
                     <th className="px-5 py-3.5">Estado</th>
                     <th className="px-5 py-3.5 text-right">Acciones</th>
                   </tr>
@@ -221,7 +209,6 @@ export function AcopioList() {
                       item.totalPesoActual !== undefined
                         ? item.totalPesoActual
                         : item.jabas?.reduce((sum, j) => sum + (Number(j.pesoActual !== undefined ? j.pesoActual : j.pesoBruto) || 0), 0) ?? pesoTotal;
-                    const gastoSel = item.gastos?.find((g) => g.tipoGasto === 'Seleccionador');
 
                     return (
                       <tr key={item.acopioId} className="hover:bg-stone-50/80 transition-colors">
@@ -232,30 +219,9 @@ export function AcopioList() {
                           </div>
                         </td>
                         <td className="px-5 py-4 text-stone-700 font-medium">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-1.5">
-                              <User className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-                              <span>{item.encargadoLote}</span>
-                            </div>
-                            {gastoSel ? (
-                              <button
-                                type="button"
-                                onClick={() => handleAbrirSeleccionador(item)}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-bold cursor-pointer transition-colors"
-                                title="Ver / Editar pago de seleccionador"
-                              >
-                                <UserCheck className="w-3 h-3 text-emerald-600" />
-                                {gastoSel.nombreReceptor} ({formatearMoneda(gastoSel.montoTotal)})
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => handleAbrirSeleccionador(item)}
-                                className="text-[10px] text-stone-400 hover:text-[#E65100] font-medium hover:underline cursor-pointer"
-                              >
-                                + Asignar seleccionador
-                              </button>
-                            )}
+                          <div className="flex items-center gap-1.5">
+                            <User className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                            <span>{item.encargadoLote}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 text-stone-600">
@@ -278,9 +244,6 @@ export function AcopioList() {
                               )}
                             </div>
                           </div>
-                        </td>
-                        <td className="px-5 py-4 font-bold text-stone-800">
-                          {formatearMoneda(item.fleteCosto || 0)}
                         </td>
                         <td className="px-5 py-4">
                           <Badge status={item.estado || 'Acopio'} />
@@ -338,7 +301,6 @@ export function AcopioList() {
                 item.totalPesoActual !== undefined
                   ? item.totalPesoActual
                   : item.jabas?.reduce((sum, j) => sum + (Number(j.pesoActual !== undefined ? j.pesoActual : j.pesoBruto) || 0), 0) ?? pesoTotal;
-              const gastoSel = item.gastos?.find((g) => g.tipoGasto === 'Seleccionador');
 
               return (
                 <div
@@ -359,24 +321,7 @@ export function AcopioList() {
                     <Badge status={item.estado || 'Acopio'} size="sm" />
                   </div>
 
-                  {/* Estado del Seleccionador */}
-                  {gastoSel ? (
-                    <div className="p-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl text-xs flex items-center justify-between text-emerald-900">
-                      <div className="flex items-center gap-1.5 font-bold">
-                        <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                        <span>Seleccionador: {gastoSel.nombreReceptor}</span>
-                      </div>
-                      <span className="font-extrabold text-emerald-800">
-                        {formatearMoneda(gastoSel.montoTotal)}
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="p-2 bg-stone-50 rounded-xl text-[11px] text-stone-400 italic">
-                      Sin seleccionador registrado en este lote
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-3 gap-2 text-xs bg-stone-50 p-2.5 rounded-xl border border-stone-100">
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-stone-50 p-2.5 rounded-xl border border-stone-100">
                     <div>
                       <span className="text-[10px] text-stone-400 uppercase font-bold block">
                         Fecha
@@ -402,14 +347,6 @@ export function AcopioList() {
                           </span>
                         )}
                       </div>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-stone-400 uppercase font-bold block">
-                        Flete
-                      </span>
-                      <span className="font-bold text-[#2C221E]">
-                        {formatearMoneda(item.fleteCosto || 0)}
-                      </span>
                     </div>
                   </div>
 
@@ -447,15 +384,6 @@ export function AcopioList() {
           </div>
         </>
       )}
-
-      {/* Modal de Pago a Seleccionador */}
-      <GastoSeleccionadorModal
-        isOpen={modalSeleccionadorOpen}
-        onClose={() => setModalSeleccionadorOpen(false)}
-        acopio={selectedAcopio}
-        gastoExistente={selectedAcopio?.gastos?.find((g) => g.tipoGasto === 'Seleccionador')}
-        onSuccess={cargarAcopios}
-      />
 
       {/* Modal de Detalle Completo de Jabas del Lote */}
       <AcopioDetalleModal

@@ -34,6 +34,7 @@ export function PuntoVentaPOS() {
   const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState('');
   const [inventarioKilos, setInventarioKilos] = useState([]);
   const [ventasRecientes, setVentasRecientes] = useState([]);
+  const [fiadosActivos, setFiadosActivos] = useState([]);
   const [usuariosEmpresa, setUsuariosEmpresa] = useState([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -67,20 +68,23 @@ export function PuntoVentaPOS() {
     try {
       setLoading(true);
       setError('');
-      const [listaUbicaciones, listaVentas, resUsuarios] = await Promise.allSettled([
+      const [listaUbicaciones, listaVentas, resUsuarios, listaFiados] = await Promise.allSettled([
         distribucionService.listarUbicaciones(empresaId),
         ventaService.listarVentas(empresaId),
         api.get(`/empresas/${empresaId}/usuarios`),
+        ventaService.listarFiados(empresaId),
       ]);
 
       const ubicacionesData = listaUbicaciones.status === 'fulfilled' ? listaUbicaciones.value : [];
       const ventasData = listaVentas.status === 'fulfilled' ? listaVentas.value : [];
       const usuariosData = resUsuarios.status === 'fulfilled' ? resUsuarios.value.data?.data || resUsuarios.value.data || [] : [];
+      const fiadosData = listaFiados.status === 'fulfilled' ? listaFiados.value : [];
 
       // Filtrar para mostrar solo las ubicaciones de Lima
       const ubicacionesLima = ubicacionesData.filter((u) => u.tipo !== 'Acopio' && u.nombre !== 'Acopio');
       setUbicaciones(ubicacionesLima);
       setVentasRecientes(ventasData);
+      setFiadosActivos(Array.isArray(fiadosData) ? fiadosData : []);
       setUsuariosEmpresa(usuariosData);
 
       // Ubicación por defecto
@@ -229,28 +233,37 @@ export function PuntoVentaPOS() {
 
     try {
       setProcessing(true);
-      await ventaService.registrarVenta(payloadVenta);
+      const respVenta = await ventaService.registrarVenta(payloadVenta);
+      const ventaIdGenerado = respVenta?.ventaId || respVenta?.data?.ventaId;
 
       // Guardar localmente registro del método de pago para auditoría inmediata
       try {
         const key = `ventas_metodo_${empresaId}`;
         const mapMetodos = JSON.parse(localStorage.getItem(key) || '{}');
-        mapMetodos[`${tipoPalta}_${categoria}_${kilosNum}`] = {
+        const cacheData = {
           metodoPago,
           vendedorNombre: nombreVendedorActivo,
           fecha: new Date().toISOString(),
         };
+        if (ventaIdGenerado) {
+          mapMetodos[ventaIdGenerado] = cacheData;
+        }
+        mapMetodos[`${tipoPalta}_${categoria}_${kilosNum}`] = cacheData;
         localStorage.setItem(key, JSON.stringify(mapMetodos));
       } catch (e) {
         console.warn('Cache local metodo venta:', e?.message);
       }
 
-      // Si el método de pago es Fiado, registrar en /api/fiados
+      // Si el método de pago es Fiado, registrar en /api/fiados vinculando la venta
       if (metodoPago === 'Fiado') {
+        const motivoConRef = ventaIdGenerado
+          ? `Venta balanza [VID:${ventaIdGenerado}]: ${kilosNum} kg Palta ${tipoPalta} ${categoria}`
+          : `Venta balanza: ${kilosNum} kg Palta ${tipoPalta} ${categoria}`;
+
         await ventaService.registrarFiado({
           empresaId,
           nombreDeudor: nombreDeudor.trim(),
-          motivoDeuda: `Venta balanza: ${kilosNum} kg Palta ${tipoPalta} ${categoria}`,
+          motivoDeuda: motivoConRef,
           montoDeuda: subtotal,
           fechaAdvertencia,
           creadoPorUsuarioId: vendedorUsuarioId,
@@ -744,17 +757,32 @@ export function PuntoVentaPOS() {
                           {formatearMoneda(totalCalc)}
                         </td>
                         <td className="py-2.5 px-3 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
-                              metodo === 'Fiado'
-                                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                : metodo === 'Yape'
-                                ? 'bg-purple-100 text-purple-900 border-purple-300'
-                                : 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            }`}
-                          >
-                            {metodo}
-                          </span>
+                          {(() => {
+                            const saldoTotalFiados = fiadosActivos.reduce(
+                              (acc, f) => acc + (Number(f.montoDeuda) || 0),
+                              0
+                            );
+                            const metLower = (metodo || '').toLowerCase();
+                            const esPagado =
+                              metLower.includes('pagado') ||
+                              (metLower === 'fiado' && saldoTotalFiados <= 0);
+                            const esFiadoPendiente = metLower === 'fiado' && !esPagado;
+                            const labelMetodo = esPagado ? 'Fiado (Pagado)' : metodo;
+
+                            return (
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold border ${
+                                  esFiadoPendiente
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : metodo === 'Yape'
+                                    ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                    : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                }`}
+                              >
+                                {labelMetodo}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td className="py-2.5 px-3 text-stone-600 font-semibold truncate max-w-[120px]">
                           {vendedorDisplay}

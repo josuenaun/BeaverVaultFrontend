@@ -26,6 +26,7 @@ export function PaltasVendidasView() {
   const navigate = useNavigate();
 
   const [ventas, setVentas] = useState([]);
+  const [fiados, setFiados] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -45,12 +46,14 @@ export function PaltasVendidasView() {
     try {
       setLoading(true);
       setError('');
-      const [listaVentas, listaUbicaciones] = await Promise.all([
+      const [listaVentas, listaUbicaciones, listaFiados] = await Promise.all([
         ventaService.listarVentas(empresaId),
         distribucionService.listarUbicaciones(empresaId),
+        ventaService.listarFiados(empresaId).catch(() => []),
       ]);
       setVentas(Array.isArray(listaVentas) ? listaVentas : []);
       setUbicaciones(Array.isArray(listaUbicaciones) ? listaUbicaciones : []);
+      setFiados(Array.isArray(listaFiados) ? listaFiados : []);
     } catch (err) {
       setError('Error al cargar el historial de ventas: ' + (err.message || ''));
     } finally {
@@ -210,7 +213,32 @@ export function PaltasVendidasView() {
     return ventasFiltradas.slice(start, start + TAMANO_PAGINA);
   }, [ventasFiltradas, paginaActual]);
 
-  // Cálculos consolidados para los indicadores clave (KPIs)
+    // Saldo pendiente real consultando cartera de fiados activa
+    const saldoPendienteFiadosReal = useMemo(
+      () => fiados.reduce((acc, f) => acc + (Number(f.montoDeuda) || 0), 0),
+      [fiados]
+    );
+
+    // Determinar si un ítem con método 'Fiado' realmente está pendiente o ya fue saldado
+    const resolverEstadoMetodoPago = useCallback(
+      (metodoRaw) => {
+        const met = (metodoRaw || 'Efectivo').trim();
+        const lower = met.toLowerCase();
+        if (lower === 'fiado (pagado)' || lower.includes('pagado')) {
+          return { label: 'Fiado (Pagado)', esPendiente: false, esFiadoPagado: true };
+        }
+        if (lower === 'fiado') {
+          if (saldoPendienteFiadosReal <= 0) {
+            return { label: 'Fiado (Pagado)', esPendiente: false, esFiadoPagado: true };
+          }
+          return { label: 'Fiado (Por cobrar)', esPendiente: true, esFiadoPagado: false };
+        }
+        return { label: met, esPendiente: false, esFiadoPagado: false };
+      },
+      [saldoPendienteFiadosReal]
+    );
+
+    // Cálculos consolidados para los indicadores clave (KPIs)
   const totales = useMemo(() => {
     let kilos = 0;
     let dineroCobrado = 0;
@@ -219,14 +247,20 @@ export function PaltasVendidasView() {
 
     ventasFiltradas.forEach((v) => {
       kilos += v.kilosVendidos;
-      const esFiado = (v.metodoPago || '').toLowerCase() === 'fiado';
-      if (esFiado) {
+      const estadoPago = resolverEstadoMetodoPago(v.metodoPago);
+      if (estadoPago.esPendiente) {
         dineroFiado += v.subtotal;
       } else {
         dineroCobrado += v.subtotal;
       }
       desgloseVariedad[v.tipoPalta] = (desgloseVariedad[v.tipoPalta] || 0) + v.kilosVendidos;
     });
+
+    if (saldoPendienteFiadosReal > 0 && dineroFiado > saldoPendienteFiadosReal) {
+      const yaCobrado = dineroFiado - saldoPendienteFiadosReal;
+      dineroCobrado += yaCobrado;
+      dineroFiado = saldoPendienteFiadosReal;
+    }
 
     return {
       kilos,
@@ -236,7 +270,7 @@ export function PaltasVendidasView() {
       totalTransacciones: ventasFiltradas.length,
       desgloseVariedad,
     };
-  }, [ventasFiltradas]);
+  }, [ventasFiltradas, saldoPendienteFiadosReal, resolverEstadoMetodoPago]);
 
   return (
     <div className="space-y-6 pb-12">
@@ -528,17 +562,22 @@ export function PaltasVendidasView() {
                         </td>
 
                         <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <span
-                            className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
-                              item.metodoPago === 'Fiado'
-                                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                : item.metodoPago === 'Yape'
-                                ? 'bg-purple-100 text-purple-900 border-purple-300'
-                                : 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            }`}
-                          >
-                            {item.metodoPago === 'Fiado' ? 'Fiado (Por cobrar)' : item.metodoPago}
-                          </span>
+                          {(() => {
+                            const infoPago = resolverEstadoMetodoPago(item.metodoPago);
+                            return (
+                              <span
+                                className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                                  infoPago.esPendiente
+                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                    : item.metodoPago === 'Yape'
+                                    ? 'bg-purple-100 text-purple-900 border-purple-300'
+                                    : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                                }`}
+                              >
+                                {infoPago.label}
+                              </span>
+                            );
+                          })()}
                         </td>
 
                         <td className="py-3 px-4 whitespace-nowrap text-stone-600 flex items-center gap-1.5 pt-4">

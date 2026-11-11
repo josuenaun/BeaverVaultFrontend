@@ -6,7 +6,6 @@ import { distribucionService } from '../../services/distribucionService';
 import { inventarioService } from '../../services/inventarioService';
 import { Spinner } from '../../components/common/Spinner';
 import { Alert } from '../../components/common/Alert';
-import { GastoDescargaModal } from './GastoDescargaModal';
 import { DividirJabaModal } from './DividirJabaModal';
 import { RefreshButton } from '../../components/common/RefreshButton';
 import { formatearKilos, formatearMoneda, formatearFecha, obtenerEstiloPastel } from '../../utils/formatters';
@@ -206,10 +205,6 @@ export function DistribucionView() {
   // Lote seleccionado para distribución rápida
   const [selectedLoteId, setSelectedLoteId] = useState('');
 
-  // Control del modal de descarga
-  const [selectedAcopio, setSelectedAcopio] = useState(null);
-  const [modalDescargaOpen, setModalDescargaOpen] = useState(false);
-
   // Control del modal de dividir jaba
   const [jabaADividir, setJabaADividir] = useState(null);
   const [modalDividirOpen, setModalDividirOpen] = useState(false);
@@ -368,11 +363,6 @@ export function DistribucionView() {
     }
   };
 
-  const handleAbrirDescarga = (acopio) => {
-    setSelectedAcopio(acopio);
-    setModalDescargaOpen(true);
-  };
-
   const handleAbrirDividir = (jaba) => {
     setJabaADividir(jaba);
     setModalDividirOpen(true);
@@ -521,16 +511,6 @@ export function DistribucionView() {
                         {ub}
                       </button>
                     ))}
-
-                    <button
-                      type="button"
-                      onClick={() => handleAbrirDescarga(acopioSeleccionado)}
-                      className="px-3.5 py-2 rounded-xl text-xs font-bold bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 transition-colors shadow-2xs min-h-[44px] flex items-center gap-1.5 cursor-pointer ml-auto"
-                      title="Registrar pago a estibadores o cuadrilla de descarga"
-                    >
-                      <Truck className="w-3.5 h-3.5 text-stone-600" />
-                      <span>Pago Descarga</span>
-                    </button>
                   </div>
                 )}
               </div>
@@ -666,14 +646,6 @@ export function DistribucionView() {
           })}
         </div>
       )}
-
-      {/* Modal de Liquidación de Descarga */}
-      <GastoDescargaModal
-        isOpen={modalDescargaOpen}
-        onClose={() => setModalDescargaOpen(false)}
-        acopio={selectedAcopio || acopioSeleccionado}
-        onSuccess={cargarDatos}
-      />
 
       {/* Modal para Dividir / Separar Grupo de Jabas */}
       <DividirJabaModal

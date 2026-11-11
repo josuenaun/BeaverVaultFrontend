@@ -70,9 +70,19 @@ export function FiadosList() {
     cargarFiados();
   }, [cargarFiados]);
 
+  // Extraer posible ventaId del motivo de deuda
+  const extraerVentaId = (motivo) => {
+    if (!motivo) return null;
+    const match = motivo.match(/\[VID:([a-f0-9-]+)\]/i);
+    return match ? match[1] : null;
+  };
+
   // Manejar abonos parciales
   const handleAbonoSuccess = async ({ fiadoId, montoAbono, metodoPago, nota, esTotal }) => {
     try {
+      const fiadoTarget = fiados.find((f) => f.fiadoId === fiadoId);
+      const ventaId = extraerVentaId(fiadoTarget?.motivoDeuda);
+
       // Actualización reactiva inmediata en pantalla: descuenta la deuda al instante
       setFiados((prev) =>
         prev
@@ -98,11 +108,32 @@ export function FiadosList() {
         metodoPago,
         nota,
         esTotal,
+        ventaId,
       });
+
+      // Si la deuda quedó saldada por completo y tenemos la venta vinculada, actualizar método a 'Fiado (Pagado)'
+      if (esTotal && ventaId) {
+        await ventaService.actualizarMetodoPagoVenta(ventaId, 'Fiado (Pagado)');
+      }
+
+      // Guardar registro de cobranza saldada en caché local de ventas
+      try {
+        const keySaldados = `fiados_saldados_${empresaId}`;
+        const mapSaldados = JSON.parse(localStorage.getItem(keySaldados) || '{}');
+        mapSaldados[fiadoId] = {
+          esTotal,
+          metodoPago,
+          montoAbonado: montoAbono,
+          fecha: new Date().toISOString(),
+        };
+        localStorage.setItem(keySaldados, JSON.stringify(mapSaldados));
+      } catch (e) {
+        console.warn('Error al guardar cache de cobranzas:', e?.message);
+      }
 
       setSuccessMsg(
         esTotal
-          ? '¡Deuda saldada en su totalidad!'
+          ? '¡Deuda saldada en su totalidad! Registrado como cobrado en caja.'
           : `Abono de ${formatearMoneda(montoAbono)} registrado con éxito. Saldo pendiente actualizado.`
       );
       setTimeout(() => setSuccessMsg(''), 4000);
@@ -135,11 +166,35 @@ export function FiadosList() {
     if (!fiadoASaldar) return;
     try {
       setSaldando(true);
-      await ventaService.eliminarFiado(fiadoASaldar.fiadoId);
-      setSuccessMsg(`Deuda de ${fiadoASaldar.nombreDeudor} marcada como cobrada y saldada.`);
+      const ventaId = extraerVentaId(fiadoASaldar.motivoDeuda);
+      await ventaService.eliminarFiado(fiadoASaldar.fiadoId, {
+        ventaId,
+        metodoPago: 'Fiado (Pagado)',
+      });
+
+      if (ventaId) {
+        await ventaService.actualizarMetodoPagoVenta(ventaId, 'Fiado (Pagado)');
+      }
+
+      // Guardar registro de liquidación en caché
+      try {
+        const keySaldados = `fiados_saldados_${empresaId}`;
+        const mapSaldados = JSON.parse(localStorage.getItem(keySaldados) || '{}');
+        mapSaldados[fiadoASaldar.fiadoId] = {
+          esTotal: true,
+          metodoPago: 'Efectivo',
+          montoAbonado: Number(fiadoASaldar.montoDeuda) || 0,
+          fecha: new Date().toISOString(),
+        };
+        localStorage.setItem(keySaldados, JSON.stringify(mapSaldados));
+      } catch (e) {
+        console.warn('Error al guardar cache de liquidacion:', e?.message);
+      }
+
+      setSuccessMsg(`Deuda de ${fiadoASaldar.nombreDeudor} marcada como cobrada y saldada. Registrado en caja.`);
       setTimeout(() => setSuccessMsg(''), 4000);
       setFiadoASaldar(null);
-      cargarFiados();
+      await cargarFiados();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al saldar la deuda.');
     } finally {
