@@ -1,4 +1,7 @@
-// src/pages/acopio/AcopioCreate.jsx - Pantalla completa táctil para nuevo lote de acopio y jabas en campo BeaverVault
+// src/pages/acopio/AcopioCreate.jsx - Pantalla de registro de nuevos lotes de acopio y pesaje de jabas en campo
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,6 +24,9 @@ import {
   Pipette,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal AcopioCreate
+// ==========================================
 export function AcopioCreate() {
   const navigate = useNavigate();
   const { user, empresaId } = useAuth();
@@ -28,32 +34,40 @@ export function AcopioCreate() {
   // Fecha actual calculada en la zona horaria de Perú (America/Lima UTC-5)
   const fechaHoyPeru = obtenerFechaHoyPeru();
 
-  // Datos generales del lote
+  // ----------------------------------------
+  // 3. Estados de Datos Generales del Lote
+  // ----------------------------------------
   const [encargadoLote, setEncargadoLote] = useState(user?.nombre || '');
   const [origen, setOrigen] = useState('');
   const [fechaCompra, setFechaCompra] = useState(fechaHoyPeru);
 
-  // Formulario temporal de grupo de jaba
+  // ----------------------------------------
+  // 4. Estados del Formulario de Ingreso de Jabas
+  // ----------------------------------------
   const [tipoPalta, setTipoPalta] = useState('');
   const [categoria, setCategoria] = useState('');
   const [codigoColor, setCodigoColor] = useState('#10B981'); // Verde por defecto en HEX
   const [cantidadJabas, setCantidadJabas] = useState('');
   const [pesoBruto, setPesoBruto] = useState('');
 
-  // Lista dinámica de grupos de jabas
+  // Lista dinámica de grupos de jabas registradas
   const [jabas, setJabas] = useState([]);
 
-  // Estados de control UI
+  // Estados de control de UI y errores
   const [itemError, setItemError] = useState('');
   const [formError, setFormError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Totales acumulados
+  // ----------------------------------------
+  // 5. Cálculos y Métricas Acumuladas
+  // ----------------------------------------
   const totalJabas = jabas.reduce((acc, curr) => acc + curr.cantidadJabas, 0);
   const totalPesoBruto = jabas.reduce((acc, curr) => acc + curr.pesoBruto, 0);
   const pesoPromedioJaba = totalJabas > 0 ? (totalPesoBruto / totalJabas).toFixed(2) : '0.00';
 
-  // Agregar grupo de jabas a la tabla
+  // ----------------------------------------
+  // 6. Manejador para Agregar Grupo de Jabas
+  // ----------------------------------------
   const handleAgregarJaba = (e) => {
     e.preventDefault();
     setItemError('');
@@ -99,10 +113,16 @@ export function AcopioCreate() {
     setPesoBruto('');
   };
 
+  // ----------------------------------------
+  // 7. Manejador para Eliminar Jaba del Lote
+  // ----------------------------------------
   const handleEliminarJaba = (id) => {
     setJabas((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ----------------------------------------
+  // 8. Manejador de Registro del Lote Completo (Submit)
+  // ----------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -169,6 +189,9 @@ export function AcopioCreate() {
     }
   };
 
+  // ----------------------------------------
+  // 9. Renderizado de la Vista
+  // ----------------------------------------
   return (
     <div className="space-y-6 pb-12">
       {/* Barra superior de navegación */}
@@ -176,7 +199,7 @@ export function AcopioCreate() {
         <div className="flex items-center gap-3">
           <Link
             to="/acopio"
-            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="p-2.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-100 text-stone-700 transition-colors min-h-11 min-w-11 flex items-center justify-center"
             title="Volver al listado"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -199,7 +222,7 @@ export function AcopioCreate() {
             variant="outline"
             onClick={() => navigate('/acopio')}
             disabled={loading}
-            className="min-h-[44px]"
+            className="min-h-11"
           >
             Cancelar
           </Button>
@@ -213,7 +236,7 @@ export function AcopioCreate() {
         <div className="lg:col-span-2 space-y-6">
           {/* Card 1: Datos Generales del Lote */}
           <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200 shadow-xs space-y-4">
-            <h2 className="text-sm font-bold text-[#2C221E] uppercase tracking-wider flex items-center gap-2 border-b border-stone-100 pb-3">
+            <h2 className="text-sm sm:text-base font-bold text-[#2C221E] flex items-center gap-2 border-b border-stone-100 pb-3">
               <MapPin className="w-4 h-4 text-[#E65100]" />
               1. Datos de Origen y Encargado
             </h2>
@@ -252,7 +275,7 @@ export function AcopioCreate() {
           {/* Card 2: Ingreso Rápido de Grupos de Jabas */}
           <div className="bg-white rounded-2xl p-5 sm:p-6 border border-stone-200 shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-              <h2 className="text-sm font-bold text-[#2C221E] uppercase tracking-wider flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-bold text-[#2C221E] flex items-center gap-2">
                 <Scale className="w-4 h-4 text-[#E65100]" />
                 2. Clasificación y Pesaje en Balanza
               </h2>
@@ -275,8 +298,8 @@ export function AcopioCreate() {
               {/* Selector de Color HEX con Paleta Visual */}
               <div className="p-3.5 bg-stone-50/80 rounded-xl border border-stone-200 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <label className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-[#E65100]" />
+                  <label className="text-xs sm:text-sm font-bold text-[#2C221E] flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-[#E65100]" />
                     Color de Jaba (Paleta & HEX)
                   </label>
                   <div className="flex items-center gap-2">
@@ -296,7 +319,7 @@ export function AcopioCreate() {
                       key={c.hex}
                       type="button"
                       onClick={() => setCodigoColor(c.hex)}
-                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center cursor-pointer shadow-xs ${
+                      className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center cursor-pointer shadow-xs ${
                         codigoColor.toUpperCase() === c.hex.toUpperCase()
                           ? 'border-[#2C221E] ring-2 ring-[#E65100] scale-110'
                           : 'border-white'
@@ -308,7 +331,7 @@ export function AcopioCreate() {
 
                   {/* Selector libre nativo */}
                   <label
-                    className="relative w-8 h-8 rounded-full border-2 border-dashed border-stone-400 hover:border-[#E65100] flex items-center justify-center cursor-pointer overflow-hidden transition-colors"
+                    className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-dashed border-stone-400 hover:border-[#E65100] flex items-center justify-center cursor-pointer overflow-hidden transition-colors"
                     title="Elegir color personalizado"
                   >
                     <input
@@ -439,7 +462,7 @@ export function AcopioCreate() {
                           <button
                             type="button"
                             onClick={() => handleEliminarJaba(item.id)}
-                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors min-h-[36px] min-w-[36px] inline-flex items-center justify-center cursor-pointer"
+                            className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors min-h-9 min-w-9 inline-flex items-center justify-center cursor-pointer"
                             title="Eliminar este grupo"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -492,7 +515,7 @@ export function AcopioCreate() {
               onClick={handleSubmit}
               loading={loading}
               disabled={jabas.length === 0}
-              className="w-full bg-[#E65100] hover:bg-[#cf4700] text-white font-extrabold h-12 text-sm shadow-md min-h-[48px]"
+              className="w-full bg-[#E65100] hover:bg-[#cf4700] text-white font-extrabold h-12 text-sm shadow-md min-h-12"
             >
               <PackageCheck className="w-5 h-5 mr-2" />
               Confirmar y Guardar Lote

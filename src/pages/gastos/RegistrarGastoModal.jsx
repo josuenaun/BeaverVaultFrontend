@@ -1,4 +1,7 @@
-// src/pages/gastos/RegistrarGastoModal.jsx - Modal para registrar gastos operativos vinculados a un lote de acopio
+// src/pages/gastos/RegistrarGastoModal.jsx - Ventana modal para el registro estructurado de gastos operativos asociados a un lote de acopio
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useId } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
@@ -18,6 +21,9 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Catálogo de Tipos de Gasto y Tarifas Sugeridas
+// ==========================================
 const TIPOS_GASTO = [
   {
     id: 'Seleccionador',
@@ -53,6 +59,9 @@ const TIPOS_GASTO = [
   },
 ];
 
+// ==========================================
+// 3. Componente Modal RegistrarGastoModal
+// ==========================================
 export function RegistrarGastoModal({
   isOpen,
   onClose,
@@ -63,7 +72,9 @@ export function RegistrarGastoModal({
   const { user } = useAuth();
   const conceptoId = useId();
 
-  // Estados del formulario
+  // ----------------------------------------
+  // 4. Estados del Formulario de Registro
+  // ----------------------------------------
   const [acopioSeleccionadoId, setAcopioSeleccionadoId] = useState('');
   const [tipoGasto, setTipoGasto] = useState('Seleccionador');
   const [nombreReceptor, setNombreReceptor] = useState('');
@@ -204,6 +215,7 @@ export function RegistrarGastoModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      icon={ReceiptText}
       title="Registrar Gasto Operativo"
       subtitle="Liquidación de costos vinculados obligatoriamente a un lote de acopio"
     >
@@ -212,18 +224,18 @@ export function RegistrarGastoModal({
 
         {/* PASO 1: Selección obligatoria del Acopio */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider">
+          <label className="block text-xs sm:text-sm font-bold text-[#2C221E]">
             1. Seleccionar Lote de Acopio Origen <span className="text-red-500">*</span>
           </label>
           {acopios.length === 0 ? (
-            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800">
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs sm:text-sm text-amber-800">
               No hay lotes de acopio disponibles para registrar gastos operativos.
             </div>
           ) : (
             <select
               value={acopioSeleccionadoId}
               onChange={(e) => setAcopioSeleccionadoId(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs font-semibold text-[#2C221E] focus:outline-none focus:ring-2 focus:ring-[#E65100]/20 focus:border-[#E65100] transition-colors"
+              className="w-full h-11 sm:h-12 px-3.5 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm font-semibold text-[#2C221E] focus:outline-none focus:ring-3 focus:ring-[#E65100]/25 focus:border-[#E65100] transition-colors"
               required
             >
               <option value="" disabled>
@@ -245,22 +257,22 @@ export function RegistrarGastoModal({
 
           {/* Tarjeta de Resumen del Acopio seleccionado */}
           {acopioSeleccionado && (
-            <div className="p-3 bg-stone-50 border border-stone-200 rounded-xl flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div className="p-3 sm:p-3.5 bg-stone-50 border border-stone-200 rounded-xl flex flex-wrap items-center justify-between gap-2.5 text-xs sm:text-sm">
               <div className="flex items-center gap-2">
-                <MapPin className="w-3.5 h-3.5 text-[#E65100] shrink-0" />
+                <MapPin className="w-4 h-4 text-[#E65100] shrink-0" />
                 <span className="font-bold text-[#2C221E]">{acopioSeleccionado.origen}</span>
-                <span className="text-stone-400">|</span>
+                <span className="text-stone-300 font-bold">|</span>
                 <span className="text-stone-600 font-medium">
                   {acopioSeleccionado.encargadoLote}
                 </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-700">
-                  <Calendar className="w-3 h-3 text-stone-400" />
+              <div className="flex items-center gap-2.5">
+                <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-600">
+                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
                   {formatearFecha(acopioSeleccionado.fechaCompra)}
                 </span>
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-orange-100 text-[#E65100] font-black text-[11px]">
-                  <Layers className="w-3 h-3" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-orange-100 text-[#E65100] font-black text-xs">
+                  <Layers className="w-3.5 h-3.5" />
                   {totalJabasAcopio} jabas
                 </span>
               </div>
@@ -270,7 +282,7 @@ export function RegistrarGastoModal({
 
         {/* PASO 2: Selección del Tipo de Gasto */}
         <div className="space-y-2">
-          <label className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider">
+          <label className="block text-xs sm:text-sm font-bold text-[#2C221E]">
             2. Tipo de Gasto Operativo <span className="text-red-500">*</span>
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -282,9 +294,9 @@ export function RegistrarGastoModal({
                   key={tipo.id}
                   type="button"
                   onClick={() => handleCambiarTipo(tipo)}
-                  className={`p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between min-h-[72px] cursor-pointer ${
+                  className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between min-h-[76px] cursor-pointer focus:outline-none ${
                     activo
-                      ? 'border-[#E65100] bg-orange-50/70 text-[#E65100] shadow-xs'
+                      ? 'border-[#E65100] bg-orange-50/80 text-[#E65100] ring-2 ring-[#E65100]/20 shadow-xs'
                       : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                   }`}
                 >
@@ -293,8 +305,8 @@ export function RegistrarGastoModal({
                     {activo && <CheckCircle2 className="w-3.5 h-3.5 text-[#E65100]" />}
                   </div>
                   <div>
-                    <span className="font-bold text-xs block leading-tight">{tipo.label}</span>
-                    <span className="text-[10px] text-stone-400 font-medium block">
+                    <span className="font-bold text-xs sm:text-sm block leading-tight">{tipo.label}</span>
+                    <span className="text-[11px] text-stone-500 font-medium block mt-0.5">
                       {tipo.etapa}
                     </span>
                   </div>
@@ -358,14 +370,14 @@ export function RegistrarGastoModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-bold text-[#2C221E] uppercase tracking-wider">
+                  <label className="text-xs sm:text-sm font-bold text-[#2C221E]">
                     Cantidad de Jabas
                   </label>
                   {totalJabasAcopio > 0 && (
                     <button
                       type="button"
                       onClick={() => setCantidadJabas(String(totalJabasAcopio))}
-                      className="text-[10px] font-bold text-[#E65100] hover:underline cursor-pointer"
+                      className="text-xs font-bold text-[#E65100] bg-orange-50 hover:bg-orange-100 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
                     >
                       Máx ({totalJabasAcopio})
                     </button>
@@ -384,7 +396,7 @@ export function RegistrarGastoModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider mb-1">
+                <label className="block text-xs sm:text-sm font-bold text-[#2C221E] mb-1.5">
                   Tarifa por Jaba (S/.)
                 </label>
                 <Input
@@ -405,7 +417,7 @@ export function RegistrarGastoModal({
           <div>
             <label
               htmlFor={conceptoId}
-              className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider mb-1"
+              className="block text-xs sm:text-sm font-bold text-[#2C221E] mb-1.5"
             >
               Concepto / Observaciones
             </label>
@@ -414,23 +426,23 @@ export function RegistrarGastoModal({
               value={concepto}
               onChange={(e) => setConcepto(e.target.value)}
               rows={2}
-              className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs text-[#2C221E] placeholder-stone-400 focus:outline-none focus:ring-2 focus:ring-[#E65100]/20 focus:border-[#E65100] transition-colors"
+              className="w-full px-3.5 py-2.5 bg-white border border-stone-300 rounded-xl text-xs sm:text-sm text-[#2C221E] placeholder-stone-400 focus:outline-none focus:ring-3 focus:ring-[#E65100]/25 focus:border-[#E65100] transition-colors"
               placeholder="Detalle descriptivo del gasto operativo"
             />
           </div>
 
           {/* Tarjeta de Resumen de Liquidación */}
-          <div className="p-3.5 bg-orange-50/50 border border-orange-200/80 rounded-xl flex items-center justify-between">
+          <div className="p-4 bg-orange-50/70 border border-orange-200/90 rounded-xl flex items-center justify-between">
             <div>
-              <span className="text-[11px] font-bold text-stone-600 block">Total a Liquidar</span>
-              <span className="text-[10px] text-stone-400">
+              <span className="text-xs sm:text-sm font-bold text-stone-700 block">Total a Liquidar</span>
+              <span className="text-xs text-stone-500 font-medium">
                 {esTransporte
                   ? 'Flete directo pactado'
                   : `${cantNum} jabas × ${formatearMoneda(tarifaNum)}`}
               </span>
             </div>
             <div className="text-right">
-              <span className="text-lg font-black text-[#E65100]">
+              <span className="text-xl sm:text-2xl font-black text-[#E65100]">
                 {formatearMoneda(montoTotalCalculado)}
               </span>
             </div>
@@ -438,12 +450,13 @@ export function RegistrarGastoModal({
         </div>
 
         {/* Botones de Acción */}
-        <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-stone-100">
+        <div className="flex flex-col-reverse sm:flex-row items-center justify-end gap-2.5 pt-3 border-t border-stone-100">
           <Button
             type="button"
             variant="secondary"
             onClick={onClose}
             disabled={loading}
+            className="w-full sm:w-auto min-h-[44px]"
           >
             Cancelar
           </Button>
@@ -452,7 +465,7 @@ export function RegistrarGastoModal({
             variant="primary"
             loading={loading}
             icon={ReceiptText}
-            className="bg-[#E65100] hover:bg-[#cf4700] text-white"
+            className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
           >
             Registrar Gasto Operativo
           </Button>

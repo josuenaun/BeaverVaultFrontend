@@ -1,8 +1,13 @@
-// src/services/configService.js - Servicio HTTP para Configuración y Administración SuperAdmin
+// src/services/configService.js - Servicio HTTP para configuración general y administración de entidades del sistema
 import { api } from './api';
 
+// ==========================================
+// Métodos de administración y mantenimiento
+// ==========================================
 export const configService = {
-  // Empresas (Tenants)
+  // ----------------------------------------
+  // Gestión de Empresas (Tenants)
+  // ----------------------------------------
   async listarEmpresas() {
     const res = await api.get('/empresas');
     return res.data?.data || res.data || [];
@@ -16,7 +21,9 @@ export const configService = {
     return res.data;
   },
 
-  // Ubicaciones
+  // ----------------------------------------
+  // Gestión de Ubicaciones Físicas (Almacenes y Puestos)
+  // ----------------------------------------
   async listarUbicaciones(empresaId) {
     if (!empresaId) return [];
     const res = await api.get(`/empresas/${empresaId}/ubicaciones`);
@@ -31,7 +38,9 @@ export const configService = {
     return res.data;
   },
 
-  // Roles
+  // ----------------------------------------
+  // Gestión de Roles de Usuario
+  // ----------------------------------------
   async listarRoles() {
     const res = await api.get('/roles');
     return res.data?.data || res.data || [];
@@ -45,7 +54,9 @@ export const configService = {
     return res.data;
   },
 
-  // Usuarios
+  // ----------------------------------------
+  // Gestión de Usuarios por Empresa
+  // ----------------------------------------
   async listarUsuarios(empresaId) {
     if (!empresaId) return [];
     const res = await api.get(`/empresas/${empresaId}/usuarios`);
@@ -60,7 +71,9 @@ export const configService = {
     return res.data;
   },
 
-  // Super Administradores
+  // ----------------------------------------
+  // Gestión de Cuentas Super Administrador
+  // ----------------------------------------
   async listarSuperAdmins() {
     const res = await api.get('/super-admins');
     return res.data?.data || res.data || [];

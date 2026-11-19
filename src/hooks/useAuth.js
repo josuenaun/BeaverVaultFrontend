@@ -1,7 +1,10 @@
-// src/hooks/useAuth.js - Hook personalizado para consumir el estado global de autenticación
+// src/hooks/useAuth.js - Hook personalizado para consumir el contexto global de autenticación
 import { useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
 
+// ==========================================
+// Hook para acceder al usuario, token y métodos de sesión
+// ==========================================
 export function useAuth() {
   const context = useContext(AuthContext);
   if (!context) {

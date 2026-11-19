@@ -1,4 +1,8 @@
-// src/utils/formatters.js - Formato de moneda peruana, pesos en kilogramos y fechas
+// src/utils/formatters.js - Utilidades de formateo para moneda (PEN), pesos (kg), fechas y estilos visuales
+
+// ==========================================
+// Formateador de moneda en Soles Peruanos (PEN)
+// ==========================================
 export const formatearMoneda = (monto) => {
   const numero = Number(monto) || 0;
   return new Intl.NumberFormat('es-PE', {
@@ -8,24 +12,30 @@ export const formatearMoneda = (monto) => {
   }).format(numero);
 };
 
+// ==========================================
+// Formateador de peso en kilogramos con 2 decimales
+// ==========================================
 export const formatearKilos = (peso) => {
   const numero = Number(peso) || 0;
   return `${numero.toFixed(2)} kg`;
 };
 
+// ==========================================
+// Formateador de fechas adaptado al huso horario de Perú (America/Lima)
+// ==========================================
 export const formatearFecha = (fecha) => {
   if (!fecha) return '-';
   try {
-    // 1. Si viene como string
+    // 1. Manejo de string con formato ISO o YYYY-MM-DD
     if (typeof fecha === 'string') {
       const match = fecha.match(/^(\d{4})-(\d{2})-(\d{2})/);
-      // Si es formato solo fecha YYYY-MM-DD o tiene medianoche UTC T00:00:00 (evitar retroceso por UTC-5)
+      // Evitar desplazamiento de día por huso horario en fechas sin hora o medianoche UTC
       if (match && (fecha.length === 10 || fecha.includes('T00:00:00') || fecha.includes(' 00:00:00'))) {
         const [, year, month, day] = match;
         return `${day}/${month}/${year}`;
       }
     }
-    // 2. Si viene como objeto Date que está en medianoche UTC
+    // 2. Manejo de objeto Date con medianoche UTC
     if (fecha instanceof Date) {
       if (fecha.getUTCHours() === 0 && fecha.getUTCMinutes() === 0 && fecha.getUTCSeconds() === 0) {
         const day = String(fecha.getUTCDate()).padStart(2, '0');
@@ -34,7 +44,7 @@ export const formatearFecha = (fecha) => {
         return `${day}/${month}/${year}`;
       }
     }
-    // 3. Para timestamps reales (como ventas o auditorías), convertir al huso de Perú
+    // 3. Manejo de timestamps con conversión explícita a huso horario de Perú
     return new Intl.DateTimeFormat('es-PE', {
       timeZone: 'America/Lima',
       year: 'numeric',
@@ -46,9 +56,9 @@ export const formatearFecha = (fecha) => {
   }
 };
 
-/**
- * Obtener la fecha actual en Perú (America/Lima UTC-5) en formato YYYY-MM-DD
- */
+// ==========================================
+// Obtención de la fecha actual de Perú en formato ISO YYYY-MM-DD
+// ==========================================
 export const obtenerFechaHoyPeru = () => {
   try {
     return new Intl.DateTimeFormat('en-CA', {
@@ -62,12 +72,9 @@ export const obtenerFechaHoyPeru = () => {
   }
 };
 
-/**
- * Convierte un código de color (hexadecimal o nombre) a un estilo pastel suave
- * para la sección de background sin saturar la vista, garantizando legibilidad corporativa.
- * @param {string} codigoColor
- * @returns {{ backgroundColor: string, borderColor: string, color: string, dotColor: string }}
- */
+// ==========================================
+// Conversión de color de jaba a estilo pastel suave para UI
+// ==========================================
 export const obtenerEstiloPastel = (codigoColor) => {
   if (!codigoColor) {
     return {
@@ -81,7 +88,7 @@ export const obtenerEstiloPastel = (codigoColor) => {
   const str = String(codigoColor).trim();
   const lower = str.toLowerCase();
 
-  // Mapeo por palabras clave comunes en español
+  // Diccionario de colores comunes con tonos suaves
   const mapaColores = {
     verde: { bg: '#F0FDF4', border: '#BBF7D0', text: '#166534', dot: '#22C55E' },
     azul: { bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', dot: '#3B82F6' },
@@ -94,6 +101,7 @@ export const obtenerEstiloPastel = (codigoColor) => {
     blanco: { bg: '#FFFFFF', border: '#E2E8F0', text: '#334155', dot: '#CBD5E1' },
   };
 
+  // Coincidencia por nombre de color
   for (const [key, val] of Object.entries(mapaColores)) {
     if (lower.includes(key)) {
       return {
@@ -105,7 +113,7 @@ export const obtenerEstiloPastel = (codigoColor) => {
     }
   }
 
-  // Procesamiento de colores Hexadecimales (#RGB o #RRGGBB)
+  // Coincidencia por código hexadecimal (#RGB o #RRGGBB)
   if (str.startsWith('#')) {
     let hex = str.slice(1);
     if (hex.length === 3) {
@@ -126,6 +134,7 @@ export const obtenerEstiloPastel = (codigoColor) => {
     }
   }
 
+  // Estilo por defecto en caso de no coincidir
   return {
     backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',

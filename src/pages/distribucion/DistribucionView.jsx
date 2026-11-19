@@ -1,4 +1,7 @@
-// src/pages/distribucion/DistribucionView.jsx - Tablero Kanban para Distribución de Jabas con Sincronización Automática y Flexibilidad Total
+// src/pages/distribucion/DistribucionView.jsx - Tablero Kanban para distribución física de jabas y asignación de puestos en Lima
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { acopioService } from '../../services/acopioService';
@@ -19,16 +22,18 @@ import {
 } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 
+// ==========================================
+// 2. Configuración Visual de Ubicaciones
+// ==========================================
 const UBICACION_COLORS = {
   'Camara Frio': 'border-sky-200 bg-sky-50/70 text-[#0288D1]',
   'Puesto Principal': 'border-[#E8D8C8] bg-[#E8D8C8]/30 text-[#2C221E]',
   'Puesto Contingencia': 'border-stone-200 bg-[#6D4C41]/10 text-[#6D4C41]',
 };
 
-/**
- * Componente Tarjeta de Jaba 100% Simétrica y Flexible
- * Permite seleccionar y reubicar libremente a cualquier puesto en cualquier momento.
- */
+// ==========================================
+// 3. Subcomponente Tarjeta de Jaba Simétrica
+// ==========================================
 function JabaCardSimetrica({
   jaba,
   idx,
@@ -48,9 +53,8 @@ function JabaCardSimetrica({
   const estaAgotada = esLiquidada || pesoNumerico <= 0 || jaba.estado === 'Convertida_Kilos';
   const pesoRestante = estaAgotada ? 0 : pesoNumerico;
 
-  // Todas las ubicaciones disponibles para máxima flexibilidad de movimiento
+  // Destinos disponibles para movimiento entre puestos
   const destinosDisponibles = UBICACIONES;
-
   const idSelect = `select-mover-${prefixId}-${jaba.jabaId || idx}`;
 
   return (

@@ -1,66 +1,49 @@
-// src/services/ventaService.js - Servicio HTTP para Etapa 4: Ventas, Balanza e Inventario en Kilos
+// src/services/ventaService.js - Servicio HTTP para transacciones POS en balanza, historial de ventas y fiados
 import { api } from './api';
 
+// ==========================================
+// Métodos de ventas comerciales y balanza (Etapa 4)
+// ==========================================
 export const ventaService = {
-  /**
-   * Obtener inventario disponible en kilos por ubicación física
-   * (GET /api/ubicaciones/:ubicacionId/inventario-kilos)
-   * @param {string} ubicacionId
-   */
+  // ----------------------------------------
+  // Consultas de Inventario para Balanza POS
+  // ----------------------------------------
   async listarInventarioKilos(ubicacionId) {
     if (!ubicacionId) return [];
     const response = await api.get(`/ubicaciones/${ubicacionId}/inventario-kilos`);
     return response.data?.data || response.data || [];
   },
 
-  /**
-   * Registrar venta mayorista por kilogramos en balanza
-   * (POST /api/ventas)
-   * @param {Object} data - { empresaId, vendedorUsuarioId, ubicacionId, detalles }
-   */
+  // Registrar venta comercial calculada con peso en kilogramos
   async registrarVenta(data) {
     const response = await api.post('/ventas', data);
     return response.data?.data || response.data;
   },
 
-  /**
-   * Listar historial de ventas de una empresa
-   * (GET /api/empresas/:empresaId/ventas)
-   * @param {string} empresaId
-   */
+  // Consultar historial completo de transacciones de venta de la empresa
   async listarVentas(empresaId) {
     if (!empresaId) return [];
     const response = await api.get(`/empresas/${empresaId}/ventas`);
     return response.data?.data || response.data || [];
   },
 
-  /**
-   * Registrar cuenta por cobrar / fiado
-   * (POST /api/fiados)
-   * @param {Object} data - { empresaId, nombreDeudor, motivoDeuda, montoDeuda, fechaAdvertencia, creadoPorUsuarioId }
-   */
+  // ----------------------------------------
+  // Cuentas por Cobrar (Fiados)
+  // ----------------------------------------
+  // Registrar una cuenta por cobrar o fiado a cliente
   async registrarFiado(data) {
     const response = await api.post('/fiados', data);
     return response.data?.data || response.data;
   },
 
-  /**
-   * Listar cuentas por cobrar / fiados de una empresa
-   * (GET /api/empresas/:empresaId/fiados)
-   * @param {string} empresaId
-   */
+  // Consultar cartera de fiados pendientes o vencidos de la empresa
   async listarFiados(empresaId) {
     if (!empresaId) return [];
     const response = await api.get(`/empresas/${empresaId}/fiados`);
     return response.data?.data || response.data || [];
   },
 
-  /**
-   * Eliminar o saldar fiado
-   * (DELETE /api/fiados/:fiadoId)
-   * @param {string} fiadoId
-   * @param {Object} [params] - { ventaId, metodoPago }
-   */
+  // Eliminar o liquidar un fiado saldado
   async eliminarFiado(fiadoId, params = {}) {
     const query = new URLSearchParams();
     if (params.ventaId) query.append('ventaId', params.ventaId);
@@ -71,12 +54,7 @@ export const ventaService = {
     return response.data;
   },
 
-  /**
-   * Actualizar método de pago de una venta
-   * (PATCH /api/ventas/:ventaId/metodo-pago)
-   * @param {string} ventaId
-   * @param {string} metodoPago
-   */
+  // Actualizar método de cobro asociado a una transacción de venta
   async actualizarMetodoPagoVenta(ventaId, metodoPago) {
     try {
       const response = await api.patch(`/ventas/${ventaId}/metodo-pago`, { metodoPago });
@@ -87,12 +65,7 @@ export const ventaService = {
     }
   },
 
-  /**
-   * Registrar abono parcial de un fiado
-   * (POST /api/fiados/:fiadoId/abonos o PATCH /api/fiados/:fiadoId)
-   * @param {string} fiadoId
-   * @param {Object} data - { montoAbono, metodoPago, nota, esTotal, ventaId }
-   */
+  // Registrar pago parcial o abono a cuenta de un fiado existente
   async registrarAbonoFiado(fiadoId, data) {
     try {
       const response = await api.patch(`/fiados/${fiadoId}`, data);
@@ -110,12 +83,7 @@ export const ventaService = {
     }
   },
 
-  /**
-   * Actualizar estado del fiado (ej. 'Mora', 'Saldado')
-   * (PATCH /api/fiados/:fiadoId/estado)
-   * @param {string} fiadoId
-   * @param {Object} data - { estado: 'Mora' | 'Saldado' | 'Pendiente' }
-   */
+  // Cambiar estado administrativo del fiado (ej. Pendiente, Mora, Saldado)
   async actualizarEstadoFiado(fiadoId, data) {
     try {
       const response = await api.patch(`/fiados/${fiadoId}/estado`, data);

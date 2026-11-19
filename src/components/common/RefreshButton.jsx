@@ -2,6 +2,9 @@
 import { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 
+// ==========================================
+// Componente RefreshButton
+// ==========================================
 export function RefreshButton({
   onRefresh,
   loading = false,
@@ -9,12 +12,13 @@ export function RefreshButton({
   className = '',
   title = 'Actualizar datos',
 }) {
+  // Estado local para garantizar animación fluida durante la recarga
   const [girando, setGirando] = useState(false);
 
+  // Manejador del clic con tiempo mínimo de giro para feedback táctil
   const handleClick = async () => {
     if (girando || loading) return;
     setGirando(true);
-    // Garantiza al menos 750ms de giro visible para que el usuario sienta la respuesta táctil
     const promesaGiroMinimo = new Promise((resolve) => setTimeout(resolve, 750));
     try {
       if (onRefresh) {
@@ -31,6 +35,7 @@ export function RefreshButton({
 
   const estaAnimando = girando || loading;
 
+  // Renderizado del botón de recarga
   return (
     <button
       type="button"

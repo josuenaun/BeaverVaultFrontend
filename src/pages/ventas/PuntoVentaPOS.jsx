@@ -1,4 +1,7 @@
-// src/pages/ventas/PuntoVentaPOS.jsx - Terminal Punto de Venta (POS) Mayorista en Balanza por Kilos
+// src/pages/ventas/PuntoVentaPOS.jsx - Terminal de Punto de Venta (POS) mayorista con pesaje en balanza por kilogramos
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -24,12 +27,18 @@ import {
   ShoppingBag,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal PuntoVentaPOS
+// ==========================================
 export function PuntoVentaPOS() {
   const { user, empresaId } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const targetUbicacionId = location.state?.ubicacionId;
 
+  // ----------------------------------------
+  // 3. Estados de Ubicaciones, Inventario y Transacciones
+  // ----------------------------------------
   const [ubicaciones, setUbicaciones] = useState([]);
   const [ubicacionSeleccionada, setUbicacionSeleccionada] = useState('');
   const [inventarioKilos, setInventarioKilos] = useState([]);
@@ -41,7 +50,9 @@ export function PuntoVentaPOS() {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  // Estados del ítem a vender
+  // ----------------------------------------
+  // 4. Estados del Ítem a Vender y Cobro
+  // ----------------------------------------
   const [tipoPalta, setTipoPalta] = useState('Fuerte');
   const [categoria, setCategoria] = useState('1era');
   const [kilosStr, setKilosStr] = useState('');
@@ -57,12 +68,15 @@ export function PuntoVentaPOS() {
     new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
 
+  // Cálculos reactivos de montos y vuelto
   const kilosNum = parseFloat(kilosStr) || 0;
   const precioNum = parseFloat(precioUnitarioStr) || 0;
   const subtotal = kilosNum * precioNum;
   const vuelto = Math.max(0, (parseFloat(montoRecibido) || 0) - subtotal);
 
-  // Cargar ubicaciones, ventas e inventario
+  // ----------------------------------------
+  // 5. Carga de Datos desde la API
+  // ----------------------------------------
   const cargarUbicacionesYVentas = useCallback(async () => {
     if (!empresaId) return;
     try {

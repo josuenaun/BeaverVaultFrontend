@@ -1,8 +1,11 @@
-// src/components/common/PeriodFilter.jsx - Barra de selección y filtrado por periodos contables y operativos
+// src/components/common/PeriodFilter.jsx - Barra de filtrado temporal por periodos predefinidos o rango personalizado
 import { useState, useEffect } from 'react';
 import { Calendar, Filter } from 'lucide-react';
 import { obtenerFechaHoyPeru } from '../../utils/formatters';
 
+// ==========================================
+// Lista de periodos contables predefinidos
+// ==========================================
 const PRESETS = [
   { id: 'TODO', label: 'Histórico Completo' },
   { id: 'HOY', label: 'Hoy' },
@@ -12,7 +15,11 @@ const PRESETS = [
   { id: 'CUSTOM', label: 'Personalizado' },
 ];
 
+// ==========================================
+// Componente PeriodFilter
+// ==========================================
 export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
+  // Estados locales de selección de fecha
   const [preset, setPreset] = useState(initialPreset);
   const [fechaInicio, setFechaInicio] = useState('');
   const [fechaFin, setFechaFin] = useState('');
@@ -20,7 +27,7 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
 
   const hoy = obtenerFechaHoyPeru();
 
-  // Calcular fechas al cambiar el preset
+  // Efecto: cálculo de fechas según el preset seleccionado
   useEffect(() => {
     const ahora = new Date();
     const hoyStr = hoy;
@@ -58,9 +65,9 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
         label: `Últimos 7 Días (${hace7Str} a ${hoyStr})`,
       });
     } else if (preset === 'ESTE_MES') {
-      const primerDia = new Date(ahora.getFullYear(), ahora.getMonth(), 1)
-        .toISOString()
-        .split('T')[0];
+      const year = ahora.getFullYear();
+      const month = String(ahora.getMonth() + 1).padStart(2, '0');
+      const primerDia = `${year}-${month}-01`;
       setFechaInicio(primerDia);
       setFechaFin(hoyStr);
       setMostrarCustom(false);
@@ -71,12 +78,12 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
         label: `Este Mes (${primerDia} a ${hoyStr})`,
       });
     } else if (preset === 'MES_ANTERIOR') {
-      const primerDia = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1)
-        .toISOString()
-        .split('T')[0];
-      const ultimoDia = new Date(ahora.getFullYear(), ahora.getMonth(), 0)
-        .toISOString()
-        .split('T')[0];
+      const mesAnteriorDate = new Date(ahora.getFullYear(), ahora.getMonth() - 1, 1);
+      const year = mesAnteriorDate.getFullYear();
+      const month = String(mesAnteriorDate.getMonth() + 1).padStart(2, '0');
+      const primerDia = `${year}-${month}-01`;
+      const ultimoDiaNum = new Date(year, mesAnteriorDate.getMonth() + 1, 0).getDate();
+      const ultimoDia = `${year}-${month}-${String(ultimoDiaNum).padStart(2, '0')}`;
       setFechaInicio(primerDia);
       setFechaFin(ultimoDia);
       setMostrarCustom(false);
@@ -88,35 +95,30 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
       });
     } else if (preset === 'CUSTOM') {
       setMostrarCustom(true);
-      // Se mantiene lo que el usuario digite o defaults
-      if (!fechaInicio) setFechaInicio(hoyStr);
-      if (!fechaFin) setFechaFin(hoyStr);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preset, hoy]);
+  }, [preset, hoy, onPeriodChange]);
 
-  // Manejar cambio manual en rango custom
-  const handleAplicarCustom = (e) => {
-    e.preventDefault();
-    if (!fechaInicio || !fechaFin) return;
+  // Manejador de aplicación de fechas personalizadas
+  const aplicarCustom = () => {
+    if (!fechaInicio && !fechaFin) return;
     onPeriodChange?.({
       preset: 'CUSTOM',
       fechaInicio,
       fechaFin,
-      label: `Personalizado (${fechaInicio} a ${fechaFin})`,
+      label: `Personalizado (${fechaInicio || 'Inicio'} a ${fechaFin || 'Hoy'})`,
     });
   };
 
+  // Renderizado de botones de preset e inputs de rango de fecha
   return (
-    <div className="bg-white rounded-xl border border-stone-200 shadow-sm p-3.5 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2 text-stone-700 font-semibold text-xs uppercase tracking-wider">
-          <Calendar className="w-4 h-4 text-emerald-700" />
-          <span>Periodo Contable / Operativo:</span>
+    <div className="bg-white rounded-2xl border border-stone-200 p-3 sm:p-4 shadow-xs space-y-3">
+      {/* Botones de presets */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className="flex items-center gap-1.5 text-stone-500 text-xs font-bold shrink-0 mr-1">
+          <Filter className="w-3.5 h-3.5 text-[#E65100]" />
+          <span>Periodo:</span>
         </div>
-
-        {/* Botones de presets */}
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
           {PRESETS.map((p) => {
             const activo = preset === p.id;
             return (
@@ -124,10 +126,10 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
                 key={p.id}
                 type="button"
                 onClick={() => setPreset(p.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
                   activo
-                    ? 'bg-emerald-800 text-white shadow-sm ring-1 ring-emerald-900'
-                    : 'bg-stone-50 text-stone-600 hover:bg-stone-100 hover:text-stone-900 border border-stone-200'
+                    ? 'bg-[#2C221E] text-white shadow-xs'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
                 }`}
               >
                 {p.label}
@@ -137,45 +139,38 @@ export function PeriodFilter({ onPeriodChange, initialPreset = 'ESTE_MES' }) {
         </div>
       </div>
 
-      {/* Selector de Rango Personalizado */}
+      {/* Rango de fechas manual si está en modo personalizado */}
       {mostrarCustom && (
-        <form
-          onSubmit={handleAplicarCustom}
-          className="pt-2 border-t border-stone-100 flex flex-wrap items-end gap-3 text-xs"
-        >
-          <div className="flex items-center gap-2">
-            <span className="text-stone-500 font-medium">Desde:</span>
-            <input
-              type="date"
-              value={fechaInicio}
-              max={hoy}
-              onChange={(e) => setFechaInicio(e.target.value)}
-              className="px-2.5 py-1.5 rounded-lg border border-stone-300 text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-xs"
-              required
-            />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 pt-2 border-t border-stone-100 animate-in fade-in">
+          <div className="flex items-center gap-2 flex-1">
+            <div className="relative flex-1">
+              <Calendar className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="date"
+                value={fechaInicio}
+                onChange={(e) => setFechaInicio(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 outline-hidden"
+              />
+            </div>
+            <span className="text-stone-400 text-xs">hasta</span>
+            <div className="relative flex-1">
+              <Calendar className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="date"
+                value={fechaFin}
+                onChange={(e) => setFechaFin(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 text-xs font-medium border border-stone-300 rounded-xl focus:border-[#E65100] focus:ring-2 focus:ring-[#E65100]/20 outline-hidden"
+              />
+            </div>
           </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-stone-500 font-medium">Hasta:</span>
-            <input
-              type="date"
-              value={fechaFin}
-              min={fechaInicio}
-              max={hoy}
-              onChange={(e) => setFechaFin(e.target.value)}
-              className="px-2.5 py-1.5 rounded-lg border border-stone-300 text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:border-transparent text-xs"
-              required
-            />
-          </div>
-
           <button
-            type="submit"
-            className="px-4 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white font-medium shadow-sm transition-colors text-xs flex items-center gap-1"
+            type="button"
+            onClick={aplicarCustom}
+            className="px-4 py-1.5 rounded-xl bg-[#E65100] text-white text-xs font-bold hover:bg-[#cf4700] transition-colors cursor-pointer shrink-0"
           >
-            <Filter className="w-3.5 h-3.5" />
             Aplicar Rango
           </button>
-        </form>
+        </div>
       )}
     </div>
   );

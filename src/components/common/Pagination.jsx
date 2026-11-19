@@ -1,6 +1,9 @@
-// src/components/common/Pagination.jsx - Componente de paginación responsivo BeaverVault (10 items/página)
+// src/components/common/Pagination.jsx - Paginador responsivo de listas y tablas de datos (10 elementos por página)
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
+// ==========================================
+// Componente de Paginación Accesible
+// ==========================================
 export function Pagination({
   currentPage = 1,
   totalItems = 0,
@@ -8,16 +11,19 @@ export function Pagination({
   onPageChange,
   className = '',
 }) {
+  // Cálculo de páginas totales
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
+  // No renderizar barra de paginación si cabe en una única página
   if (totalItems <= pageSize) {
-    return null; // No renderizar barra si cabe en una sola página
+    return null;
   }
 
+  // Rango de índices actuales
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
 
-  // Generar rango de números de página visibles
+  // Cálculo del rango de números de página visibles
   const getPageNumbers = () => {
     const pages = [];
     const maxVisible = 5;
@@ -35,77 +41,81 @@ export function Pagination({
     return pages;
   };
 
+  // Renderizado de la barra de paginación
   return (
     <div
-      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white border-t border-stone-200 text-xs ${className}`}
+      className={`flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3.5 bg-white border-t border-stone-200 text-xs sm:text-sm ${className}`}
     >
       {/* Información del rango de registros */}
-      <div className="text-stone-500 font-medium text-center sm:text-left">
-        Mostrando <span className="font-bold text-[#2C221E]">{startItem}</span> a{' '}
-        <span className="font-bold text-[#2C221E]">{endItem}</span> de{' '}
-        <span className="font-bold text-[#2C221E]">{totalItems}</span> registros
+      <div className="text-stone-600 font-medium text-center sm:text-left">
+        Mostrando <span className="font-extrabold text-[#2C221E]">{startItem}</span> a{' '}
+        <span className="font-extrabold text-[#2C221E]">{endItem}</span> de{' '}
+        <span className="font-extrabold text-[#2C221E]">{totalItems}</span> registros
       </div>
 
-      {/* Controles de Navegación */}
-      <div className="flex items-center gap-1 select-none">
-        {/* Primera página */}
+      {/* Controles de navegación de página */}
+      <div className="flex items-center gap-1.5 select-none flex-wrap justify-center">
+        {/* Ir a primera página */}
         <button
           type="button"
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="min-h-[40px] min-w-[40px] p-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center"
           title="Primera página"
+          aria-label="Primera página"
         >
           <ChevronsLeft className="w-4 h-4" />
         </button>
 
-        {/* Página anterior */}
+        {/* Ir a página anterior */}
         <button
           type="button"
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="min-h-[40px] min-w-[40px] p-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center"
           title="Página anterior"
+          aria-label="Página anterior"
         >
           <ChevronLeft className="w-4 h-4" />
         </button>
 
-        {/* Números de página */}
-        <div className="flex items-center gap-1">
-          {getPageNumbers().map((num) => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => onPageChange(num)}
-              className={`min-w-[32px] h-8 px-2 rounded-lg font-bold text-xs transition-all ${
-                currentPage === num
-                  ? 'bg-[#E65100] text-white shadow-xs'
-                  : 'border border-stone-200 text-stone-700 hover:bg-stone-50'
-              }`}
-            >
-              {num}
-            </button>
-          ))}
-        </div>
+        {/* Botones numéricos de página */}
+        {getPageNumbers().map((pageNum) => (
+          <button
+            key={pageNum}
+            type="button"
+            onClick={() => onPageChange(pageNum)}
+            className={`min-h-[40px] min-w-[40px] px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              currentPage === pageNum
+                ? 'bg-[#E65100] text-white shadow-xs'
+                : 'border border-stone-300 text-stone-700 hover:bg-stone-100'
+            }`}
+            aria-current={currentPage === pageNum ? 'page' : undefined}
+          >
+            {pageNum}
+          </button>
+        ))}
 
-        {/* Página siguiente */}
+        {/* Ir a página siguiente */}
         <button
           type="button"
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}
-          className="p-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="min-h-[40px] min-w-[40px] p-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center"
           title="Página siguiente"
+          aria-label="Página siguiente"
         >
           <ChevronRight className="w-4 h-4" />
         </button>
 
-        {/* Última página */}
+        {/* Ir a última página */}
         <button
           type="button"
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage === totalPages}
-          className="p-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          className="min-h-[40px] min-w-[40px] p-2 rounded-xl border border-stone-300 text-stone-700 hover:bg-stone-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer flex items-center justify-center"
           title="Última página"
+          aria-label="Última página"
         >
           <ChevronsRight className="w-4 h-4" />
         </button>

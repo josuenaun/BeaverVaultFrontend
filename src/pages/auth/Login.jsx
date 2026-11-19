@@ -8,11 +8,17 @@ import { Alert } from '../../components/common/Alert';
 import { Mail, Lock, ArrowRight } from 'lucide-react';
 import beavervaultLogo from '../../assets/beavervault_logo.png';
 
+// ==========================================
+// Componente de Vista Login
+// ==========================================
 export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { login } = useAuth();
 
+  // ----------------------------------------
+  // Estados de formulario y validación
+  // ----------------------------------------
   const [formData, setFormData] = useState({
     correo: '',
     contrasena: '',
@@ -22,6 +28,9 @@ export function Login() {
   const [serverError, setServerError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // ----------------------------------------
+  // Manejador de cambio en inputs
+  // ----------------------------------------
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -37,6 +46,9 @@ export function Login() {
     }
   };
 
+  // ----------------------------------------
+  // Validación de credenciales en cliente
+  // ----------------------------------------
   const validateForm = () => {
     const errors = {};
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -57,6 +69,9 @@ export function Login() {
     return Object.keys(errors).length === 0;
   };
 
+  // ----------------------------------------
+  // Envío del formulario de autenticación
+  // ----------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -82,6 +97,9 @@ export function Login() {
     }
   };
 
+  // ----------------------------------------
+  // Renderizado de la interfaz de login
+  // ----------------------------------------
   return (
     <div className="min-h-screen bg-[#2C221E] flex flex-col justify-center py-10 sm:py-12 sm:px-6 lg:px-8 relative overflow-hidden select-none">
       {/* Resplandor decorativo ambiental */}
@@ -89,7 +107,7 @@ export function Login() {
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#6D4C41]/35 rounded-full blur-3xl pointer-events-none" />
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
-        {/* Encabezado: Logo BeaverVault destacado y título del sistema */}
+        {/* Encabezado: Logo BeaverVault y título */}
         <div className="text-center">
           <div className="flex justify-center mb-2">
             <img

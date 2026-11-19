@@ -1,4 +1,7 @@
-// src/pages/distribucion/DividirJabaModal.jsx - Separación y fraccionamiento flexible de jabas con recálculo de kilos
+// src/pages/distribucion/DividirJabaModal.jsx - Separación y fraccionamiento de grupos de jabas con recálculo proporcional de peso
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
@@ -10,11 +13,18 @@ import { ventaService } from '../../services/ventaService';
 import { formatearKilos, obtenerEstiloPastel } from '../../utils/formatters';
 import { Split, ArrowRight, Scale, Info, Layers } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Modal DividirJabaModal
+// ==========================================
 export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSuccess }) {
+  // ----------------------------------------
+  // 3. Cálculos Proporcionales de Jabas y Peso
+  // ----------------------------------------
   const cantTotal = Number(jaba?.cantidadJabas) || 0;
   const pesoTotal = Number(jaba?.pesoBruto) || 0;
   const pesoPromedio = cantTotal > 0 ? pesoTotal / cantTotal : 0;
 
+  // Estados locales de fraccionamiento
   const [cantidadSeparar, setCantidadSeparar] = useState('1');
   const [pesoSeparado, setPesoSeparado] = useState('');
   const [ubicacionDestinoId, setUbicacionDestinoId] = useState('');
@@ -24,6 +34,9 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
   // Estilo pastel de la jaba a dividir
   const estiloPastel = obtenerEstiloPastel(jaba?.codigoColor);
 
+  // ----------------------------------------
+  // 4. Efecto de Inicialización de Valores
+  // ----------------------------------------
   useEffect(() => {
     if (isOpen && jaba) {
       setError('');
@@ -63,6 +76,9 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
   const cantRestante = cantTotal - cantSepNum;
   const pesoRestante = Number((pesoTotal - pesoSepNum).toFixed(2));
 
+  // ----------------------------------------
+  // 5. Manejador de Fraccionamiento (Submit)
+  // ----------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!jaba?.jabaId) return;
@@ -135,6 +151,8 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
       onClose={onClose}
       title="Dividir / Separar Grupo de Jabas"
       subtitle={`Lote: ${jaba?.acopioOrigen || 'Origen'} • Palta ${jaba?.tipoPalta || ''} (${jaba?.categoria || ''})`}
+      icon={Split}
+      maxWidth="max-w-xl"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && <Alert type="error" message={error} onClose={() => setError('')} />}
@@ -145,40 +163,40 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
             backgroundColor: estiloPastel.backgroundColor,
             borderColor: estiloPastel.borderColor,
           }}
-          className="p-3.5 rounded-xl border space-y-2"
+          className="p-4 rounded-xl border space-y-2.5 shadow-2xs"
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-black uppercase text-[#6D4C41]">
+            <span className="text-xs sm:text-sm font-black uppercase text-[#6D4C41] tracking-wide">
               Grupo Original en Balanza
             </span>
             <span
-              className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border flex items-center gap-1 shadow-2xs"
+              className="text-xs font-bold px-2.5 py-1 rounded-lg bg-white border flex items-center gap-1.5 shadow-2xs"
               style={{ borderColor: estiloPastel.borderColor }}
             >
               <span
-                className="w-2 h-2 rounded-full inline-block"
+                className="w-2.5 h-2.5 rounded-full inline-block"
                 style={{ backgroundColor: estiloPastel.dotColor }}
               />
-              {jaba?.codigoColor}
+              <span className="font-mono">{jaba?.codigoColor}</span>
             </span>
           </div>
 
-          <div className="flex items-center justify-between text-xs bg-white/80 p-2 rounded-lg border border-black/5">
-            <span className="font-bold text-[#2C221E] flex items-center gap-1">
-              <Layers className="w-3.5 h-3.5 text-stone-500" />
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm bg-white/90 p-3 rounded-xl border border-black/5">
+            <span className="font-bold text-[#2C221E] flex items-center gap-1.5">
+              <Layers className="w-4 h-4 text-stone-500" />
               Total: {cantTotal} jabas
             </span>
-            <span className="font-extrabold text-[#E65100]">
+            <span className="font-black text-base text-[#E65100]">
               {formatearKilos(pesoTotal)}
             </span>
-            <span className="text-stone-500 font-semibold">
+            <span className="text-stone-600 font-semibold">
               Promedio: {pesoPromedio.toFixed(2)} kg/jaba
             </span>
           </div>
         </div>
 
         {/* Campos de Entrada: Cantidad de Jabas y Kilos */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <Input
               label="¿Cuántas Jabas separar?"
@@ -192,7 +210,7 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
               placeholder={`Máx. ${cantTotal - 1}`}
               required
             />
-            <p className="text-[10px] text-stone-500 mt-1 font-semibold">
+            <p className="text-xs text-stone-500 mt-1 font-medium">
               Rango permitido: 1 a {cantTotal - 1} jabas
             </p>
           </div>
@@ -210,9 +228,9 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
               placeholder="Ej. 120.50"
               required
             />
-            <p className="text-[10px] text-stone-500 mt-1 font-semibold flex items-center gap-1">
-              <Scale className="w-3 h-3 text-[#E65100]" />
-              Calculado automáticamente (editable si se repesó)
+            <p className="text-xs text-stone-500 mt-1 font-medium flex items-center gap-1">
+              <Scale className="w-3.5 h-3.5 text-[#E65100] shrink-0" />
+              Calculado automáticamente
             </p>
           </div>
         </div>
@@ -228,53 +246,53 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
         />
 
         {/* Previsualización del Resultado de la División */}
-        <div className="p-3 bg-[#FAFAFC] border border-[#E8D8C8] rounded-xl space-y-2">
-          <p className="text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-            Previsualización de la Separación:
+        <div className="p-4 bg-[#FAFAFC] border border-stone-200 rounded-xl space-y-2.5">
+          <p className="text-xs font-bold text-stone-600 uppercase tracking-wider">
+            Previsualización del resultado:
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Grupo Remanente */}
-            <div className="p-2.5 bg-white rounded-lg border border-stone-200">
-              <span className="text-[10px] text-stone-500 uppercase font-bold block">
+            <div className="p-3 bg-white rounded-xl border border-stone-200 shadow-2xs">
+              <span className="text-xs text-stone-500 font-bold block">
                 Se Queda en Origen:
               </span>
-              <p className="text-sm font-extrabold text-[#2C221E] mt-0.5">
+              <p className="text-base font-black text-[#2C221E] mt-1">
                 {cantRestante > 0 ? cantRestante : 0} jabas
               </p>
-              <p className="text-xs font-bold text-[#E65100]">
+              <p className="text-sm font-black text-[#E65100]">
                 {formatearKilos(pesoRestante > 0 ? pesoRestante : 0)}
               </p>
             </div>
 
             {/* Nuevo Grupo Separado */}
-            <div className="p-2.5 bg-orange-50/70 rounded-lg border border-orange-200">
-              <span className="text-[10px] text-[#E65100] uppercase font-bold block flex items-center gap-1">
-                <ArrowRight className="w-3 h-3" />
+            <div className="p-3 bg-orange-50/80 rounded-xl border border-orange-200 shadow-2xs">
+              <span className="text-xs text-[#E65100] font-bold flex items-center gap-1">
+                <ArrowRight className="w-3.5 h-3.5" />
                 Se Traslada a Destino:
               </span>
-              <p className="text-sm font-extrabold text-[#2C221E] mt-0.5">
+              <p className="text-base font-black text-[#2C221E] mt-1">
                 {cantSepNum} jabas
               </p>
-              <p className="text-xs font-bold text-[#E65100]">
+              <p className="text-sm font-black text-[#E65100]">
                 {formatearKilos(pesoSepNum)}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1 text-[11px] text-stone-500 pt-1">
-            <Info className="w-3.5 h-3.5 text-stone-400 shrink-0" />
-            <span>Regla JOSBECORSA: La suma total de kilos ({formatearKilos(pesoTotal)}) se preserva al 100% sin merma.</span>
+          <div className="flex items-center gap-1.5 text-xs text-stone-600 pt-1">
+            <Info className="w-4 h-4 text-stone-400 shrink-0" />
+            <span>Regla BeaverVault: La suma total de kilos ({formatearKilos(pesoTotal)}) se preserva al 100% sin merma.</span>
           </div>
         </div>
 
         {/* Botones de Acción */}
-        <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2.5 justify-end">
+        <div className="pt-3 border-t border-stone-200 flex flex-col-reverse sm:flex-row gap-2.5 justify-end">
           <Button
             variant="outline"
             onClick={onClose}
             disabled={loading}
-            className="w-full sm:w-auto min-h-[44px]"
+            className="w-full sm:w-auto min-h-11"
           >
             Cancelar
           </Button>
@@ -282,9 +300,9 @@ export function DividirJabaModal({ isOpen, onClose, jaba, ubicaciones = [], onSu
             type="submit"
             loading={loading}
             disabled={cantSepNum < 1 || cantSepNum >= cantTotal}
-            className="w-full sm:w-auto bg-[#E65100] hover:bg-[#cf4700] text-white min-h-[44px]"
+            className="w-full sm:w-auto bg-[#E65100] hover:bg-[#cf4700] text-white min-h-11"
           >
-            <Split className="w-4 h-4 mr-2" />
+            <Split className="w-4 h-4 mr-1.5" />
             Confirmar y Separar Jabas
           </Button>
         </div>

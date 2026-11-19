@@ -1,12 +1,21 @@
-// src/context/AuthContext.jsx - Estado global de autenticación, empresa activa y roles BeaverVault
+// src/context/AuthContext.jsx - Proveedor global de autenticación, empresa activa y roles de usuario
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { authService } from '../services/authService';
 import { api } from '../services/api';
 
+// ==========================================
+// Creación del Contexto de Autenticación
+// ==========================================
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext(null);
 
+// ==========================================
+// Componente Proveedor (AuthProvider)
+// ==========================================
 export function AuthProvider({ children }) {
+  // ----------------------------------------
+  // Estados locales de sesión y credenciales
+  // ----------------------------------------
   const [token, setToken] = useState(() => {
     const stored = localStorage.getItem('token');
     return stored && stored !== 'undefined' && stored !== 'null' ? stored : null;
@@ -23,6 +32,9 @@ export function AuthProvider({ children }) {
     }
   });
 
+  // ----------------------------------------
+  // Estados de empresa activa y catálogos
+  // ----------------------------------------
   const [empresaId, setEmpresaIdState] = useState(() => {
     return localStorage.getItem('empresaId') || null;
   });
@@ -31,7 +43,9 @@ export function AuthProvider({ children }) {
   const [roles, setRoles] = useState([]);
   const [loadingEmpresa, setLoadingEmpresa] = useState(false);
 
-  // Guardar empresaId en localStorage y estado
+  // ----------------------------------------
+  // Manejador para persistir empresa seleccionada
+  // ----------------------------------------
   const setEmpresaId = useCallback((id) => {
     if (id) {
       localStorage.setItem('empresaId', id);
@@ -42,11 +56,13 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  // Carga automática de empresas y roles desde el backend
+  // ----------------------------------------
+  // Carga y sincronización de catálogo de empresas y roles desde backend
+  // ----------------------------------------
   const resolverEmpresaActiva = useCallback(async (usuarioActual) => {
     if (!usuarioActual) return;
 
-    // 1. Si es usuario regular, asegurar su empresaId
+    // Asignar empresa inicial si el usuario tiene una fija
     if (usuarioActual.empresaId) {
       setEmpresaId(usuarioActual.empresaId);
     }
@@ -56,7 +72,7 @@ export function AuthProvider({ children }) {
       setEmpresaIdState(guardada);
     }
 
-    // 2. Consultar empresas y roles disponibles en el backend
+    // Consultar lista completa de empresas y roles si está disponible
     try {
       setLoadingEmpresa(true);
       const [resEmpresas, resRoles] = await Promise.allSettled([
@@ -84,13 +100,18 @@ export function AuthProvider({ children }) {
     }
   }, [setEmpresaId]);
 
+  // ----------------------------------------
+  // Efecto: sincronizar datos al iniciar sesión o recargar página
+  // ----------------------------------------
   useEffect(() => {
     if (token && user) {
       resolverEmpresaActiva(user);
     }
   }, [token, user, resolverEmpresaActiva]);
 
-  // Empresa activa computada a partir del catálogo
+  // ----------------------------------------
+  // Datos computados: Objeto de empresa activa
+  // ----------------------------------------
   const empresaActiva = useMemo(() => {
     if (!empresaId && empresas.length > 0) return empresas[0];
     return (
@@ -99,7 +120,9 @@ export function AuthProvider({ children }) {
     );
   }, [empresas, empresaId, user]);
 
-  // Nombre descriptivo y exacto del rol
+  // ----------------------------------------
+  // Datos computados: Nombre descriptivo del rol del usuario
+  // ----------------------------------------
   const rolNombre = useMemo(() => {
     if (!user) return '';
     if (user.superAdminId || user.rol === 'SUPER_ADMIN') {
@@ -114,6 +137,9 @@ export function AuthProvider({ children }) {
     return user.rol || 'USUARIO';
   }, [user, roles]);
 
+  // ----------------------------------------
+  // Función: Iniciar sesión y guardar sesión en Storage
+  // ----------------------------------------
   const login = async (correo, contrasena) => {
     const rawData = await authService.login(correo, contrasena);
 
@@ -137,17 +163,18 @@ export function AuthProvider({ children }) {
     localStorage.setItem('token', extractedToken);
     localStorage.setItem('user', JSON.stringify(userData));
 
-    // Asignar empresaId de inmediato si viene en el payload
     if (userData.empresaId) {
       setEmpresaId(userData.empresaId);
     }
 
-    // Resolver catálogo de empresas y roles
     setTimeout(() => resolverEmpresaActiva(userData), 50);
 
     return payload;
   };
 
+  // ----------------------------------------
+  // Función: Cerrar sesión y limpiar almacenamiento local
+  // ----------------------------------------
   const logout = () => {
     setToken(null);
     setUser(null);
@@ -159,8 +186,12 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('empresaId');
   };
 
+  // Bandera booleana de estado de autenticación
   const isAuthenticated = Boolean(token && token !== 'undefined' && token !== 'null');
 
+  // ----------------------------------------
+  // Renderizado del proveedor con el valor del contexto expuesto
+  // ----------------------------------------
   return (
     <AuthContext.Provider
       value={{
@@ -183,7 +214,9 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Hook de acceso directo
+// ==========================================
+// Hook de acceso directo al contexto
+// ==========================================
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);

@@ -1,4 +1,7 @@
-// src/pages/inventario/InventarioView.jsx - Módulo de Inventario por Puesto en Lima
+// src/pages/inventario/InventarioView.jsx - Módulo de consulta y monitoreo de inventario de palta en kilos por puesto
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -20,10 +23,16 @@ import {
   Search,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal InventarioView
+// ==========================================
 export function InventarioView() {
   const { empresaId, empresaActiva } = useAuth();
   const navigate = useNavigate();
 
+  // ----------------------------------------
+  // 3. Estados de Inventario, Entidades y Filtros
+  // ----------------------------------------
   const [ubicaciones, setUbicaciones] = useState([]);
   const [acopios, setAcopios] = useState([]);
   const [ventas, setVentas] = useState([]);
@@ -36,7 +45,9 @@ export function InventarioView() {
   const [filtroPalta, setFiltroPalta] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
 
-  // Normalizar nombre de ubicación para match uniforme
+  // ----------------------------------------
+  // 4. Normalizador de Ubicación
+  // ----------------------------------------
   const normalizarNombreUbicacion = useCallback((nombre) => {
     if (!nombre) return '';
     const norm = nombre.toLowerCase().trim();
@@ -46,7 +57,9 @@ export function InventarioView() {
     return nombre;
   }, []);
 
-  // Cargar datos sincronizados: ubicaciones, acopios con jabas distribuidas y ventas
+  // ----------------------------------------
+  // 5. Carga Sincronizada de Datos
+  // ----------------------------------------
   const cargarInventario = useCallback(async () => {
     if (!empresaId) return;
     setLoading(true);
@@ -285,7 +298,7 @@ export function InventarioView() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider">
-                {empresaActiva?.nombre || 'JOSBECORSA'}
+                {empresaActiva?.nombre || 'BeaverVault'}
               </span>
               <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500" />
               <span className="text-xs text-stone-400 font-medium">Lima</span>

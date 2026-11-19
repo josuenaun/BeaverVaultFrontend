@@ -1,16 +1,26 @@
-// src/pages/fiados/AbonoFiadoModal.jsx - Registro de Abonos Parciales y Cobranzas
+// src/pages/fiados/AbonoFiadoModal.jsx - Ventana modal para registro de abonos parciales y liquidación de deudas de fiados
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState } from 'react';
 import { Modal } from '../../components/common/Modal';
 import { Button } from '../../components/common/Button';
 import { Alert } from '../../components/common/Alert';
 import { formatearMoneda } from '../../utils/formatters';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, HandCoins } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Modal AbonoFiadoModal
+// ==========================================
 export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarcarMora }) {
+  // ----------------------------------------
+  // 3. Cálculos de Saldos y Amortización
+  // ----------------------------------------
   const saldoPendiente = Number(fiado?.montoDeuda) || 0;
   const montoTotalOriginal = Number(fiado?.montoTotalOriginal) || saldoPendiente;
   const totalAbonadoPreviamente = Math.max(0, montoTotalOriginal - saldoPendiente);
 
+  // Estados del formulario de abono
   const [montoAbonoStr, setMontoAbonoStr] = useState('');
   const [metodoPago, setMetodoPago] = useState('Efectivo');
   const [nota, setNota] = useState('');
@@ -21,6 +31,9 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
   const montoAbonoNum = parseFloat(montoAbonoStr) || 0;
   const nuevoSaldo = Math.max(0, saldoPendiente - montoAbonoNum);
 
+  // ----------------------------------------
+  // 4. Manejador de Registro de Abono
+  // ----------------------------------------
   const handleGuardarAbono = async (e) => {
     e.preventDefault();
     setError('');
@@ -57,6 +70,7 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
     <Modal
       isOpen={isOpen}
       onClose={onClose}
+      icon={HandCoins}
       title="Registrar Abono o Cobranza"
       subtitle={`Cliente: ${fiado?.nombreDeudor || 'Deudor'}`}
     >
@@ -64,30 +78,30 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
         {error && <Alert type="error" message={error} onClose={() => setError('')} />}
 
         {/* Tarjeta de Resumen de Deuda */}
-        <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
+        <div className="p-4 rounded-xl bg-stone-50 border border-stone-200 space-y-2.5">
           {montoTotalOriginal > saldoPendiente && (
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-stone-500 font-bold">Monto Original de la Venta:</span>
-              <span className="font-mono font-bold text-stone-800">
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="text-stone-600 font-semibold">Monto Original de la Venta:</span>
+              <span className="font-mono font-bold text-[#2C221E]">
                 {formatearMoneda(montoTotalOriginal)}
               </span>
             </div>
           )}
 
           {totalAbonadoPreviamente > 0 && (
-            <div className="flex justify-between items-center text-xs">
-              <span className="text-emerald-700 font-bold">Total Abonado a la Fecha:</span>
+            <div className="flex justify-between items-center text-xs sm:text-sm">
+              <span className="text-emerald-700 font-semibold">Total Abonado a la Fecha:</span>
               <span className="font-mono font-bold text-emerald-700">
                 +{formatearMoneda(totalAbonadoPreviamente)}
               </span>
             </div>
           )}
 
-          <div className="flex justify-between items-center pt-2 border-t border-stone-200">
-            <span className="text-xs font-black text-[#2C221E] uppercase">
+          <div className="flex justify-between items-center pt-2.5 border-t border-stone-200">
+            <span className="text-xs sm:text-sm font-bold text-[#2C221E]">
               Saldo Pendiente Actual:
             </span>
-            <span className="font-mono font-black text-lg text-[#E65100]">
+            <span className="font-mono font-black text-xl sm:text-2xl text-[#E65100]">
               {formatearMoneda(saldoPendiente)}
             </span>
           </div>
@@ -95,7 +109,7 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
 
         {/* Input Monto a Pagar Hoy */}
         <div>
-          <label className="text-xs font-black text-[#2C221E] block mb-1">
+          <label className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-1.5">
             ¿Cuánto paga hoy el cliente? (S/.):
           </label>
           <div className="relative">
@@ -107,13 +121,13 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
               placeholder="0.00"
               value={montoAbonoStr}
               onChange={(e) => setMontoAbonoStr(e.target.value)}
-              className="w-full h-11 px-3 text-base font-black bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100]"
+              className="w-full h-12 px-4 pr-36 text-lg sm:text-xl font-black text-[#2C221E] bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100] focus:ring-3 focus:ring-[#E65100]/25 transition-all"
               autoFocus
             />
             <button
               type="button"
               onClick={() => setMontoAbonoStr(saldoPendiente.toFixed(2))}
-              className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#E65100] text-[11px] font-black cursor-pointer"
+              className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1.5 rounded-lg bg-orange-100 hover:bg-orange-200 text-[#E65100] text-xs font-black cursor-pointer transition-colors"
             >
               Paga Todo ({formatearMoneda(saldoPendiente)})
             </button>
@@ -122,9 +136,9 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
 
         {/* Proyección del Saldo Restante */}
         {montoAbonoNum > 0 && (
-          <div className="p-3 bg-orange-50 border border-orange-200 rounded-xl flex items-center justify-between text-xs">
+          <div className="p-3.5 bg-orange-50/70 border border-orange-200/90 rounded-xl flex items-center justify-between text-xs sm:text-sm">
             <span className="font-bold text-stone-700">Nuevo Saldo que quedará debiendo:</span>
-            <span className="font-mono font-black text-sm text-[#E65100]">
+            <span className="font-mono font-black text-base sm:text-lg text-[#E65100]">
               {formatearMoneda(nuevoSaldo)}
             </span>
           </div>
@@ -132,17 +146,17 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
 
         {/* Método de Pago */}
         <div>
-          <label className="text-xs font-bold text-stone-600 block mb-1">Medio de Cobro:</label>
-          <div className="grid grid-cols-2 gap-2">
+          <label className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-1.5">Medio de Cobro:</label>
+          <div className="grid grid-cols-2 gap-2.5">
             {['Efectivo', 'Yape'].map((mp) => (
               <button
                 key={mp}
                 type="button"
                 onClick={() => setMetodoPago(mp)}
-                className={`h-10 rounded-xl border font-bold text-xs cursor-pointer transition-all ${
+                className={`min-h-[44px] rounded-xl border font-bold text-sm cursor-pointer transition-all ${
                   metodoPago === mp
-                    ? 'border-[#E65100] bg-orange-50 text-[#E65100]'
-                    : 'border-stone-200 bg-white text-stone-600'
+                    ? 'border-[#E65100] bg-orange-50/80 text-[#E65100] ring-2 ring-[#E65100]/20'
+                    : 'border-stone-200 bg-white hover:bg-stone-50 text-stone-700'
                 }`}
               >
                 {mp}
@@ -153,7 +167,7 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
 
         {/* Nota o Comprobante */}
         <div>
-          <label className="text-[11px] font-bold text-stone-600 block mb-1">
+          <label className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-1.5">
             Nota de Cobranza (Opcional):
           </label>
           <input
@@ -161,7 +175,7 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
             placeholder="Ej. Abono a cuenta de palta Hass / Recibido en efectivo"
             value={nota}
             onChange={(e) => setNota(e.target.value)}
-            className="w-full h-9 px-3 text-xs bg-white border border-stone-300 rounded-lg outline-hidden"
+            className="w-full h-11 px-3.5 text-sm bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100] focus:ring-3 focus:ring-[#E65100]/25 transition-all text-[#2C221E]"
           />
         </div>
 
@@ -197,27 +211,32 @@ export function AbonoFiadoModal({ isOpen, onClose, fiado, onAbonoSuccess, onMarc
         )}
 
         {/* Acciones */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3">
           {/* Botón para solicitar confirmación de Mora */}
           {!confirmarMora && (
             <button
               type="button"
               onClick={() => setConfirmarMora(true)}
-              className="text-xs text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer py-1"
+              className="text-xs sm:text-sm text-rose-600 hover:text-rose-800 font-bold underline cursor-pointer py-1"
             >
               Marcar en Mora (No pagó)
             </button>
           )}
 
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end ml-auto">
-            <Button type="button" variant="secondary" onClick={onClose} className="h-10 text-xs">
+          <div className="flex flex-col-reverse sm:flex-row items-center gap-2.5 w-full sm:w-auto justify-end ml-auto">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+              className="w-full sm:w-auto min-h-[44px] text-xs sm:text-sm"
+            >
               Cancelar
             </Button>
             <Button
               type="submit"
               loading={loading}
               disabled={montoAbonoNum <= 0}
-              className="h-10 text-xs font-black bg-[#E65100] hover:bg-[#cf4700] text-white"
+              className="w-full sm:w-auto min-h-[44px] text-xs sm:text-sm font-black bg-[#E65100] hover:bg-[#cf4700] text-white"
             >
               <CheckCircle2 className="w-4 h-4 mr-1.5" />
               Confirmar Abono ({formatearMoneda(montoAbonoNum)})

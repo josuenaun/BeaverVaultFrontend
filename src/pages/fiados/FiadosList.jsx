@@ -1,4 +1,7 @@
-// src/pages/fiados/FiadosList.jsx - Módulo de cobranzas, abonos y control de fiados (Ventas al crédito)
+// src/pages/fiados/FiadosList.jsx - Módulo de cobranzas, abonos parciales y control de cuentas por cobrar (ventas al crédito)
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { ventaService } from '../../services/ventaService';
@@ -24,14 +27,21 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal FiadosList
+// ==========================================
 export function FiadosList() {
   const { user, empresaId } = useAuth();
+
+  // ----------------------------------------
+  // 3. Estados de Fiados, Filtros y Modales
+  // ----------------------------------------
   const [fiados, setFiados] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [filtroEstado, setFiltroEstado] = useState('TODOS'); // 'TODOS' | 'PENDIENTES' | 'MORA'
+  const [filtroEstado, setFiltroEstado] = useState('TODOS');
 
   // Modal para abono parcial o liquidación
   const [selectedFiadoAbono, setSelectedFiadoAbono] = useState(null);
@@ -52,6 +62,9 @@ export function FiadosList() {
   const [saldando, setSaldando] = useState(false);
   const [errorNuevoFiado, setErrorNuevoFiado] = useState('');
 
+  // ----------------------------------------
+  // 4. Carga de Fiados desde la API
+  // ----------------------------------------
   const cargarFiados = useCallback(async () => {
     if (!empresaId) return;
     try {
@@ -530,7 +543,7 @@ export function FiadosList() {
                           <button
                             type="button"
                             onClick={() => setSelectedFiadoAbono(item)}
-                            className="px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-[#E65100] border border-[#E65100]/30 font-bold text-xs cursor-pointer shadow-2xs"
+                            className="min-h-[40px] px-3.5 py-2 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#E65100] border border-[#E65100]/30 font-bold text-xs sm:text-sm cursor-pointer shadow-2xs transition-colors"
                             title="Registrar abono de dinero a esta cuenta"
                           >
                             Abonar / Cobrar
@@ -540,7 +553,7 @@ export function FiadosList() {
                           <Button
                             size="sm"
                             onClick={() => solicitarSaldarFiado(item)}
-                            className="bg-[#2C221E] hover:bg-black text-white font-bold text-xs"
+                            className="min-h-[40px] px-3.5 py-2 rounded-xl bg-[#2C221E] hover:bg-black text-white font-bold text-xs sm:text-sm"
                           >
                             <CheckCircle className="w-3.5 h-3.5 mr-1" />
                             Saldar
@@ -569,6 +582,7 @@ export function FiadosList() {
           setModalNuevoOpen(false);
           setErrorNuevoFiado('');
         }}
+        icon={BookOpenCheck}
         title="Registrar Fiado Directo"
         subtitle="Venta al crédito con descuento automático de kilos en inventario"
       >
@@ -584,13 +598,13 @@ export function FiadosList() {
             required
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-bold text-[#2C221E] block mb-1">Tipo de Palta:</label>
+              <label className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-1.5">Tipo de Palta:</label>
               <select
                 value={tipoPalta}
                 onChange={(e) => setTipoPalta(e.target.value)}
-                className="w-full h-10 px-3 text-xs font-bold bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100]"
+                className="w-full h-11 sm:h-12 px-3.5 text-sm font-semibold bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100] focus:ring-3 focus:ring-[#E65100]/25 transition-all"
               >
                 {TIPOS_PALTA.map((tp) => (
                   <option key={tp} value={tp}>
@@ -601,7 +615,7 @@ export function FiadosList() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-[#2C221E] block mb-1">
+              <label className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-1.5">
                 Kilos Retirados:
               </label>
               <input
@@ -610,7 +624,7 @@ export function FiadosList() {
                 placeholder="Ej. 65.50 kg"
                 value={kilosRetirados}
                 onChange={(e) => setKilosRetirados(e.target.value)}
-                className="w-full h-10 px-3 text-xs font-bold bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100]"
+                className="w-full h-11 sm:h-12 px-3.5 text-sm font-semibold bg-white border border-stone-300 rounded-xl outline-hidden focus:border-[#E65100] focus:ring-3 focus:ring-[#E65100]/25 transition-all"
               />
             </div>
           </div>
@@ -658,7 +672,8 @@ export function FiadosList() {
 
           <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2.5 justify-end">
             <Button
-              variant="outline"
+              type="button"
+              variant="secondary"
               onClick={() => setModalNuevoOpen(false)}
               disabled={saving}
               className="w-full sm:w-auto min-h-[44px]"

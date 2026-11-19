@@ -1,6 +1,7 @@
+/* src/index.css - Estilos globales, variables de paleta y configuración base */
 @import "tailwindcss";
 
-/* Definición de la Paleta Corporativa JOSBECORSA (Punto 8 - AGENTS.md) */
+/* Definición de variables CSS de la Paleta Corporativa BeaverVault */
 @layer base {
   :root {
     --color-primary: #E65100;       /* Naranja Construcción: Botones CTA y bordes activos */
@@ -11,6 +12,7 @@
     --color-cyan-tech: #0288D1;     /* Azul Cero / Cyan: Uso técnico mínimo (badges específicos) */
   }
 
+  /* Estilos base del documento y tipografía del sistema */
   body {
     background-color: #FAFAFC;
     color: #2C221E;

@@ -1,8 +1,14 @@
-// src/services/api.js - Instancia Axios centralizada con interceptores
+// src/services/api.js - Instancia centralizada de Axios con interceptores de autenticación y manejo de sesión
 import axios from 'axios';
 
+// ==========================================
+// Configuración de la URL base de la API
+// ==========================================
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+// ==========================================
+// Creación de la instancia Axios
+// ==========================================
 export const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -10,7 +16,10 @@ export const api = axios.create({
   },
 });
 
-// Interceptor de Salida: Inyecta el Token Bearer automáticamente
+// ==========================================
+// Interceptor de Salida (Peticiones)
+// Inyecta el token Bearer desde localStorage en cada solicitud
+// ==========================================
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -22,7 +31,10 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Interceptor de Entrada: Redirige a Login si el Token caduca (401)
+// ==========================================
+// Interceptor de Entrada (Respuestas)
+// Captura error 401 de expiración de sesión y redirige al Login
+// ==========================================
 api.interceptors.response.use(
   (response) => response,
   (error) => {

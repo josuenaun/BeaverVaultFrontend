@@ -1,4 +1,7 @@
-// src/pages/gastos/GastosOperativos.jsx - Panel de monitoreo y edición de Gastos Operativos BeaverVault
+// src/pages/gastos/GastosOperativos.jsx - Panel de monitoreo, edición y auditoría de gastos operativos en campo, transporte y descarga
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useId } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { gastoService } from '../../services/gastoService';
@@ -27,6 +30,9 @@ import {
   Plus,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Filtros Predefinidos por Tipo de Gasto
+// ==========================================
 const TIPOS_FILTRO = [
   { id: 'TODOS', label: 'Todos los Gastos' },
   { id: 'Seleccionador', label: 'Seleccionadores (Campo)' },
@@ -34,10 +40,16 @@ const TIPOS_FILTRO = [
   { id: 'Descarga', label: 'Descarga (Lima)' },
 ];
 
+// ==========================================
+// 3. Componente Principal GastosOperativos
+// ==========================================
 export function GastosOperativos() {
   const { empresaId } = useAuth();
   const conceptoEditId = useId();
 
+  // ----------------------------------------
+  // 4. Estados de Lista, Filtros y Modales
+  // ----------------------------------------
   const [gastos, setGastos] = useState([]);
   const [acopios, setAcopios] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +71,7 @@ export function GastosOperativos() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
 
-  // Modal interactivo de confirmación para eliminar (evita window.confirm / localhost dice)
+  // Modal interactivo de confirmación para eliminar
   const [gastoAEliminar, setGastoAEliminar] = useState(null);
   const [eliminandoGasto, setEliminandoGasto] = useState(false);
 
@@ -67,6 +79,9 @@ export function GastosOperativos() {
   const [paginaActual, setPaginaActual] = useState(1);
   const TAMANO_PAGINA = 10;
 
+  // ----------------------------------------
+  // 5. Carga de Gastos y Acopios desde API
+  // ----------------------------------------
   const cargarDatos = useCallback(async () => {
     if (!empresaId) return;
     try {
@@ -489,7 +504,7 @@ export function GastosOperativos() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleAbrirEditar(g)}
-                              className="text-stone-700 hover:text-[#E65100] hover:border-orange-300 font-bold"
+                              className="min-h-[40px] px-3 text-stone-700 hover:text-[#E65100] hover:border-orange-300 font-bold"
                               title="Modificar / Actualizar este gasto"
                             >
                               <Edit2 className="w-3.5 h-3.5 mr-1 text-[#E65100]" />
@@ -499,7 +514,7 @@ export function GastosOperativos() {
                             <button
                               type="button"
                               onClick={() => setGastoAEliminar(g)}
-                              className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                               title="Eliminar registro"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -605,6 +620,7 @@ export function GastosOperativos() {
       <Modal
         isOpen={modalEditOpen}
         onClose={() => setModalEditOpen(false)}
+        icon={ReceiptText}
         title="Modificar Gasto Operativo"
         subtitle={`Tipo: ${gastoAEditar?.tipoGasto || ''} • Acopio: ${gastoAEditar?.acopioOrigen || '-'}`}
       >
@@ -659,7 +675,7 @@ export function GastosOperativos() {
           <div>
             <label
               htmlFor={conceptoEditId}
-              className="block text-xs font-bold text-[#2C221E] uppercase tracking-wider mb-1.5"
+              className="block text-xs sm:text-sm font-bold text-[#2C221E] mb-1.5"
             >
               Concepto / Observaciones
             </label>
@@ -674,7 +690,8 @@ export function GastosOperativos() {
 
           <div className="pt-2 flex flex-col-reverse sm:flex-row gap-2.5 justify-end">
             <Button
-              variant="outline"
+              type="button"
+              variant="secondary"
               onClick={() => setModalEditOpen(false)}
               disabled={editLoading}
               className="w-full sm:w-auto min-h-[44px]"
@@ -684,7 +701,7 @@ export function GastosOperativos() {
             <Button
               type="submit"
               loading={editLoading}
-              className="w-full sm:w-auto bg-[#E65100] hover:bg-[#cf4700] text-white min-h-[44px]"
+              className="w-full sm:w-auto bg-[#E65100] hover:bg-[#cf4700] text-white font-bold min-h-[44px]"
             >
               <Edit2 className="w-4 h-4 mr-2" />
               Guardar Cambios

@@ -1,4 +1,7 @@
-// src/pages/acopio/AcopioList.jsx - Listado histórico y gestión de lotes de acopio BeaverVault
+// src/pages/acopio/AcopioList.jsx - Listado histórico y gestión de lotes de acopio de palta
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -23,8 +26,15 @@ import {
   Layers,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal AcopioList
+// ==========================================
 export function AcopioList() {
   const { empresaId } = useAuth();
+
+  // ----------------------------------------
+  // 3. Estados de Datos, Búsqueda y Modales
+  // ----------------------------------------
   const [acopios, setAcopios] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,10 +44,13 @@ export function AcopioList() {
   const [detalleAcopio, setDetalleAcopio] = useState(null);
   const [modalDetalleOpen, setModalDetalleOpen] = useState(false);
 
-  // Modal interactivo de confirmación para eliminar lote (sin window.confirm)
+  // Modal interactivo de confirmación para eliminar lote
   const [loteAEliminar, setLoteAEliminar] = useState(null);
   const [eliminandoLote, setEliminandoLote] = useState(false);
 
+  // ----------------------------------------
+  // 4. Carga de Lotes desde el Backend
+  // ----------------------------------------
   const cargarAcopios = useCallback(async () => {
     if (!empresaId) return;
     try {
@@ -60,6 +73,9 @@ export function AcopioList() {
     cargarAcopios();
   }, [cargarAcopios]);
 
+  // ----------------------------------------
+  // 5. Manejadores de Eventos (Eliminar, Detalle)
+  // ----------------------------------------
   const handleConfirmarEliminar = async () => {
     if (!loteAEliminar?.acopioId) return;
     try {
@@ -79,13 +95,14 @@ export function AcopioList() {
     setModalDetalleOpen(true);
   };
 
-  // Filtrado reactivo en memoria
+  // ----------------------------------------
+  // 6. Filtrado y Paginación de Lotes
+  // ----------------------------------------
   const acopiosFiltrados = acopios.filter((a) => {
     const texto = `${a.origen || ''} ${a.encargadoLote || ''} ${a.estado || ''}`.toLowerCase();
     return texto.includes(searchQuery.toLowerCase());
   });
 
-  // Paginación (10 lotes por página)
   const [paginaActual, setPaginaActual] = useState(1);
   const TAMANO_PAGINA = 10;
 
@@ -98,6 +115,9 @@ export function AcopioList() {
     paginaActual * TAMANO_PAGINA
   );
 
+  // ----------------------------------------
+  // 7. Renderizado de la Interfaz
+  // ----------------------------------------
   return (
     <div className="space-y-6">
       {/* Cabecera de la vista */}
@@ -254,7 +274,7 @@ export function AcopioList() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleAbrirDetalle(item)}
-                              className="text-stone-700 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300"
+                              className="min-h-[40px] px-3 font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300"
                               title="Ver detalle completo de jabas"
                             >
                               <Eye className="w-3.5 h-3.5 mr-1 text-[#2C221E]" />
@@ -264,7 +284,7 @@ export function AcopioList() {
                             <button
                               type="button"
                               onClick={() => setLoteAEliminar(item)}
-                              className="p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                               title="Eliminar lote"
                             >
                               <Trash2 className="w-4 h-4" />

@@ -1,6 +1,5 @@
-// src/components/layout/Sidebar.jsx - Menú lateral corporativo BeaverVault (>= md)
+// src/components/layout/Sidebar.jsx - Menú lateral de navegación principal con enlaces a todos los módulos operativos
 import { NavLink } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 import {
   LayoutDashboard,
   Sprout,
@@ -14,6 +13,9 @@ import {
 } from 'lucide-react';
 import beaverLogo from '../../assets/beavervault_logo.png';
 
+// ==========================================
+// Configuración de rutas y módulos del menú
+// ==========================================
 const MENU_ITEMS = [
   {
     to: '/dashboard',
@@ -71,41 +73,40 @@ const MENU_ITEMS = [
   },
 ];
 
+// ==========================================
+// Componente Sidebar
+// ==========================================
 export function Sidebar({ onItemClick }) {
-  const { empresaActiva, loadingEmpresa } = useAuth();
-
+  // Renderizado del menú lateral
   return (
     <aside className="h-full flex flex-col bg-[#2C221E] text-stone-200 select-none">
-      {/* Brand Header: Nombre de la Empresa y BeaverVault */}
-      <div className="h-20 px-5 flex items-center gap-3 border-b border-stone-800/80 bg-black/20">
-        <div className="w-10 h-10 rounded-xl bg-[#E65100] flex items-center justify-center p-1.5 shadow-md shrink-0">
+      {/* ---------------------------------------- */}
+      {/* Cabecera del Sidebar con Logo e Identidad*/}
+      {/* ---------------------------------------- */}
+      <div className="h-20 sm:h-22 px-4 py-3 flex items-center gap-3.5 border-b border-stone-800/80">
+        <div className="shrink-0 flex items-center justify-center">
           <img
             src={beaverLogo}
             alt="BeaverVault Logo"
-            className="w-full h-full object-contain filter brightness-110"
+            className="w-14 h-14 sm:w-16 sm:h-16 object-contain filter drop-shadow-md transition-transform duration-200 hover:scale-105"
             onError={(e) => {
               e.currentTarget.style.display = 'none';
             }}
           />
         </div>
         <div className="min-w-0">
-          {loadingEmpresa && !empresaActiva ? (
-            <div className="h-5 w-28 bg-stone-700/60 rounded animate-pulse mb-1" />
-          ) : (
-            <h1
-              className="text-base font-extrabold text-white tracking-wider truncate"
-              title={empresaActiva?.nombre || ''}
-            >
-              {empresaActiva?.nombre || 'Empresa'}
-            </h1>
-          )}
-          <p className="text-[11px] text-[#E8D8C8] font-semibold tracking-wide uppercase truncate">
+          <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-tight">
             BeaverVault
+          </h1>
+          <p className="text-xs font-semibold text-[#E8D8C8]/80 tracking-wide mt-0.5">
+            Sistema Mayorista
           </p>
         </div>
       </div>
 
-      {/* Navigation Links */}
+      {/* ---------------------------------------- */}
+      {/* Lista de navegación interactiva          */}
+      {/* ---------------------------------------- */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-[#E8D8C8]/70">
           Módulos Operativos

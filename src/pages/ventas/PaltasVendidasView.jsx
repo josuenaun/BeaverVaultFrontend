@@ -1,4 +1,7 @@
-// src/pages/ventas/PaltasVendidasView.jsx - Auditoría y Registro Visual de Paltas Vendidas
+// src/pages/ventas/PaltasVendidasView.jsx - Auditoría histórica y registro detallado de transacciones de paltas vendidas
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -21,26 +24,35 @@ import {
   Boxes,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal PaltasVendidasView
+// ==========================================
 export function PaltasVendidasView() {
   const { user, empresaId } = useAuth();
   const navigate = useNavigate();
 
+  // ----------------------------------------
+  // 3. Estados de Ventas, Fiados y Filtros
+  // ----------------------------------------
   const [ventas, setVentas] = useState([]);
   const [fiados, setFiados] = useState([]);
   const [ubicaciones, setUbicaciones] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Filtros
+  // Filtros interactivos
   const [filtroUbicacion, setFiltroUbicacion] = useState('TODOS');
   const [filtroPalta, setFiltroPalta] = useState('TODOS');
-  const [filtroFecha, setFiltroFecha] = useState('TODOS'); // 'TODOS' | 'HOY' | '7DIAS' (Historial completo por defecto)
+  const [filtroFecha, setFiltroFecha] = useState('TODOS');
   const [busqueda, setBusqueda] = useState('');
 
   // Paginación (10 registros por página)
   const [paginaActual, setPaginaActual] = useState(1);
   const TAMANO_PAGINA = 10;
 
+  // ----------------------------------------
+  // 4. Carga de Datos desde la API
+  // ----------------------------------------
   const cargarDatos = useCallback(async () => {
     if (!empresaId) return;
     try {

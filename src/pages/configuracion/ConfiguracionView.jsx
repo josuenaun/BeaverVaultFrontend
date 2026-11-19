@@ -1,4 +1,7 @@
-// src/pages/configuracion/ConfiguracionView.jsx - Panel de configuración maestro (Tenants, Ubicaciones, Usuarios, Roles)
+// src/pages/configuracion/ConfiguracionView.jsx - Panel de administración del sistema (Empresas, Ubicaciones, Usuarios, Roles y SuperAdmins)
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { configService } from '../../services/configService';
@@ -19,8 +22,15 @@ import {
   Plus,
 } from 'lucide-react';
 
+// ==========================================
+// 2. Componente Principal ConfiguracionView
+// ==========================================
 export function ConfiguracionView() {
   const { empresaId } = useAuth();
+
+  // ----------------------------------------
+  // 3. Pestañas y Estados de Catálogos
+  // ----------------------------------------
   const [activeTab, setActiveTab] = useState('empresas');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -33,7 +43,7 @@ export function ConfiguracionView() {
   const [roles, setRoles] = useState([]);
   const [superAdmins, setSuperAdmins] = useState([]);
 
-  // Estados de modales
+  // Estados de modales para creación de registros
   const [modalEmpresaOpen, setModalEmpresaOpen] = useState(false);
   const [nombreEmpresa, setNombreEmpresa] = useState('');
 
@@ -53,6 +63,9 @@ export function ConfiguracionView() {
 
   const [saving, setSaving] = useState(false);
 
+  // ----------------------------------------
+  // 4. Carga de Catálogos y Entidades desde la API
+  // ----------------------------------------
   const cargarDatos = useCallback(async () => {
     try {
       setLoading(true);
@@ -397,7 +410,9 @@ export function ConfiguracionView() {
       <Modal
         isOpen={modalEmpresaOpen}
         onClose={() => setModalEmpresaOpen(false)}
+        icon={Building}
         title="Crear Nueva Empresa (Tenant)"
+        subtitle="Registro de organización comercial independiente"
       >
         <form onSubmit={handleCrearEmpresa} className="space-y-4">
           <Input
@@ -405,14 +420,24 @@ export function ConfiguracionView() {
             name="nombreEmpresa"
             value={nombreEmpresa}
             onChange={(e) => setNombreEmpresa(e.target.value)}
-            placeholder="Ej. JOSBECORSA PALTA SAC"
+            placeholder="Ej. BeaverVault Palta SAC"
             required
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setModalEmpresaOpen(false)} disabled={saving}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setModalEmpresaOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               Cancelar
             </Button>
-            <Button type="submit" loading={saving} className="bg-[#E65100] text-white">
+            <Button
+              type="submit"
+              loading={saving}
+              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+            >
               Guardar Empresa
             </Button>
           </div>
@@ -422,7 +447,9 @@ export function ConfiguracionView() {
       <Modal
         isOpen={modalUbicacionOpen}
         onClose={() => setModalUbicacionOpen(false)}
+        icon={MapPin}
         title="Agregar Punto / Ubicación"
+        subtitle="Almacén, Puesto de Venta o Cámara de Maduración"
       >
         <form onSubmit={handleCrearUbicacion} className="space-y-4">
           <Input
@@ -441,11 +468,21 @@ export function ConfiguracionView() {
             options={UBICACIONES}
             required
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setModalUbicacionOpen(false)} disabled={saving}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setModalUbicacionOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               Cancelar
             </Button>
-            <Button type="submit" loading={saving} className="bg-[#E65100] text-white">
+            <Button
+              type="submit"
+              loading={saving}
+              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+            >
               Guardar Ubicación
             </Button>
           </div>
@@ -455,7 +492,9 @@ export function ConfiguracionView() {
       <Modal
         isOpen={modalUsuarioOpen}
         onClose={() => setModalUsuarioOpen(false)}
+        icon={UserCog}
         title="Registrar Usuario Operativo"
+        subtitle="Cuenta de acceso para personal de balanza o almacén"
       >
         <form onSubmit={handleCrearUsuario} className="space-y-4">
           <Input
@@ -492,11 +531,21 @@ export function ConfiguracionView() {
             options={roles.map((r) => ({ value: r.rolId, label: r.nombre }))}
             required
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setModalUsuarioOpen(false)} disabled={saving}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setModalUsuarioOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               Cancelar
             </Button>
-            <Button type="submit" loading={saving} className="bg-[#E65100] text-white">
+            <Button
+              type="submit"
+              loading={saving}
+              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+            >
               Guardar Usuario
             </Button>
           </div>
@@ -506,7 +555,9 @@ export function ConfiguracionView() {
       <Modal
         isOpen={modalRolOpen}
         onClose={() => setModalRolOpen(false)}
+        icon={ShieldCheck}
         title="Crear Rol de Seguridad"
+        subtitle="Definición de permisos y perfil de responsabilidades"
       >
         <form onSubmit={handleCrearRol} className="space-y-4">
           <Input
@@ -524,11 +575,21 @@ export function ConfiguracionView() {
             onChange={(e) => setDescRol(e.target.value)}
             placeholder="Permite acceso exclusivo al módulo de pesaje y ventas"
           />
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => setModalRolOpen(false)} disabled={saving}>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2.5 pt-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setModalRolOpen(false)}
+              disabled={saving}
+              className="w-full sm:w-auto min-h-[44px]"
+            >
               Cancelar
             </Button>
-            <Button type="submit" loading={saving} className="bg-[#E65100] text-white">
+            <Button
+              type="submit"
+              loading={saving}
+              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+            >
               Guardar Rol
             </Button>
           </div>

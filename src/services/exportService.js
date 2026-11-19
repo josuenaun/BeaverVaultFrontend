@@ -1,30 +1,21 @@
-// src/services/exportService.js - Servicio de exportación de reportes a Excel (.xlsx) y CSV
+// src/services/exportService.js - Servicio para generación y descarga de reportes contables en Excel (.xlsx) y CSV
 import * as XLSX from 'xlsx';
 import { formatearFecha } from '../utils/formatters';
 
+// ==========================================
+// Métodos de exportación de reportes
+// ==========================================
 export const exportService = {
-  /**
-   * Genera y descarga un libro de trabajo Excel (.xlsx) con 4 hojas tabuladas:
-   * 1. Resumen Ejecutivo
-   * 2. Detalle de Ventas
-   * 3. Gastos Operativos
-   * 4. Inventario por Puesto
-   * 
-   * @param {Object} params
-   * @param {Object} params.resumen - { periodoLabel, fechaInicio, fechaFin, totalIngresos, totalGastos, margenOperativo, totalKilosVendidos, totalStockLima }
-   * @param {Array} params.ventas - Array de objetos venta
-   * @param {Array} params.gastos - Array de objetos gasto
-   * @param {Array} params.inventario - Array de objetos inventario
-   * @param {string} params.nombreEmpresa - Nombre de la empresa
-   */
-  exportarExcel({ resumen, ventas = [], gastos = [], inventario = [], nombreEmpresa = 'JOSBECORSA S.A.C.' }) {
+  // ----------------------------------------
+  // Exportar reporte consolidado a formato Microsoft Excel (.xlsx)
+  // Genera un libro estructurado con 4 hojas de trabajo
+  // ----------------------------------------
+  exportarExcel({ resumen, ventas = [], gastos = [], inventario = [], nombreEmpresa = 'BeaverVault S.A.C.' }) {
     const wb = XLSX.utils.book_new();
 
-    // -------------------------------------------------------------
-    // HOJA 1: RESUMEN EJECUTIVO
-    // -------------------------------------------------------------
+    // Hoja 1: Resumen Ejecutivo e Indicadores Principales
     const resumenData = [
-      ['SISTEMA MAYORISTA JOSBECORSA - REPORTE CONSOLIDADO'],
+      ['SISTEMA MAYORISTA BEAVERVAULT - REPORTE CONSOLIDADO'],
       ['Empresa:', nombreEmpresa],
       ['Periodo:', resumen.periodoLabel || 'Histórico Completo'],
       ['Rango de Fechas:', `${resumen.fechaInicio || 'Inicio'} hasta ${resumen.fechaFin || 'Hoy'}`],
@@ -44,9 +35,7 @@ export const exportService = {
     wsResumen['!cols'] = [{ wch: 40 }, { wch: 25 }];
     XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen Ejecutivo');
 
-    // -------------------------------------------------------------
-    // HOJA 2: DETALLE DE VENTAS
-    // -------------------------------------------------------------
+    // Hoja 2: Detalle Desglosado de Ventas
     const ventasFilas = [];
     ventas.forEach((v) => {
       const fecha = formatearFecha(v.fechaVenta || v.createdAt || v.fecha);
@@ -93,22 +82,20 @@ export const exportService = {
         : [{ Mensaje: 'No se registraron ventas en el periodo seleccionado' }]
     );
     wsVentas['!cols'] = [
-      { wch: 12 }, // ID Ticket
-      { wch: 18 }, // Fecha / Hora
-      { wch: 22 }, // Puesto / Ubicación
-      { wch: 22 }, // Vendedor
-      { wch: 18 }, // Variedad
-      { wch: 18 }, // Categoría
-      { wch: 18 }, // Kilos
-      { wch: 18 }, // Precio
-      { wch: 16 }, // Subtotal
-      { wch: 16 }, // Método
+      { wch: 12 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 16 },
     ];
     XLSX.utils.book_append_sheet(wb, wsVentas, 'Detalle de Ventas');
 
-    // -------------------------------------------------------------
-    // HOJA 3: GASTOS OPERATIVOS
-    // -------------------------------------------------------------
+    // Hoja 3: Gastos Operativos Imputados
     const gastosFilas = gastos.map((g) => {
       const fecha = formatearFecha(g.fechaCreacion || g.createdAt || g.fecha);
       const lote = g.acopio?.encargadoLote
@@ -133,20 +120,18 @@ export const exportService = {
         : [{ Mensaje: 'No se registraron gastos operativos en el periodo seleccionado' }]
     );
     wsGastos['!cols'] = [
-      { wch: 18 }, // Fecha
-      { wch: 18 }, // Tipo de Gasto
-      { wch: 26 }, // Beneficiario
-      { wch: 30 }, // Lote Acopio
-      { wch: 15 }, // Cantidad Jabas
-      { wch: 20 }, // Tarifa
-      { wch: 18 }, // Monto Total
-      { wch: 40 }, // Concepto
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 26 },
+      { wch: 30 },
+      { wch: 15 },
+      { wch: 20 },
+      { wch: 18 },
+      { wch: 40 },
     ];
     XLSX.utils.book_append_sheet(wb, wsGastos, 'Gastos Operativos');
 
-    // -------------------------------------------------------------
-    // HOJA 4: INVENTARIO ACTUAL
-    // -------------------------------------------------------------
+    // Hoja 4: Existencias de Inventario Actual
     const inventarioFilas = inventario.map((item) => ({
       'Puesto / Ubicación': item.ubicacionNombre || item.ubicacion?.nombre || item.ubicacion?.tipo || 'Puesto General',
       'Tipo de Ubicación': item.ubicacion?.tipo || 'Almacén',
@@ -169,24 +154,20 @@ export const exportService = {
     ];
     XLSX.utils.book_append_sheet(wb, wsInventario, 'Inventario Actual');
 
-    // Generar archivo y forzar descarga en navegador
+    // Generar archivo y activar descarga
     const fechaISO = new Date().toISOString().split('T')[0];
-    const nombreLimpio = `Reporte_Financiero_JOSBECORSA_${fechaISO}.xlsx`;
+    const nombreLimpio = `Reporte_Financiero_BeaverVault_${fechaISO}.xlsx`;
     XLSX.writeFile(wb, nombreLimpio);
   },
 
-  /**
-   * Exporta a archivo plano CSV con codificación UTF-8 con BOM (\uFEFF)
-   * para compatibilidad nativa instantánea en Excel sin problemas de tildes o caracteres especiales.
-   * 
-   * @param {Object} params
-   * @param {string} params.tipo - 'resumen' | 'ventas' | 'gastos' | 'inventario'
-   * @param {Object} params.data - datos correspondientes
-   */
+  // ----------------------------------------
+  // Exportar datos a archivo plano CSV compatible con UTF-8 BOM
+  // Permite abrir directamente en Excel preservando acentos y caracteres
+  // ----------------------------------------
   exportarCSV({ tipo = 'resumen', resumen, ventas = [], gastos = [], inventario = [] }) {
     let lineas = [];
     const fechaISO = new Date().toISOString().split('T')[0];
-    let nombreArchivo = `Reporte_JOSBECORSA_${tipo}_${fechaISO}.csv`;
+    let nombreArchivo = `Reporte_BeaverVault_${tipo}_${fechaISO}.csv`;
 
     if (tipo === 'resumen') {
       lineas = [
@@ -243,6 +224,7 @@ export const exportService = {
       });
     }
 
+    // Construcción del archivo Blob con BOM y forzado de descarga en cliente
     const contenidoCSV = '\uFEFF' + lineas.join('\n');
     const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

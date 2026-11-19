@@ -1,23 +1,18 @@
-// src/services/inventarioService.js - Servicio HTTP para Gestión y Monitoreo de Inventario en Kilos
+// src/services/inventarioService.js - Servicio HTTP para consulta y supervisión de existencias en kilogramos
 import { api } from './api';
 
+// ==========================================
+// Métodos para consulta de existencias e inventario
+// ==========================================
 export const inventarioService = {
-  /**
-   * Obtener todo el inventario en kilos de una empresa agrupado con los nombres de puesto
-   * (GET /api/empresas/:empresaId/inventario-kilos)
-   * @param {string} empresaId
-   */
+  // Consultar el stock total en kilos agrupado por ubicación, variedad y categoría
   async listarInventarioPorEmpresa(empresaId) {
     if (!empresaId) return [];
     const response = await api.get(`/empresas/${empresaId}/inventario-kilos`);
     return response.data?.data || response.data || [];
   },
 
-  /**
-   * Obtener lista de ubicaciones activas de la empresa (Cámara Frío, Puesto Principal, Contingencia)
-   * (GET /api/empresas/:empresaId/ubicaciones)
-   * @param {string} empresaId
-   */
+  // Obtener la lista de ubicaciones activas disponibles para la empresa
   async listarUbicaciones(empresaId) {
     if (!empresaId) return [];
     const response = await api.get(`/empresas/${empresaId}/ubicaciones`);

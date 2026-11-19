@@ -1,5 +1,10 @@
-// src/components/common/Spinner.jsx - Indicador de carga accesible
+// src/components/common/Spinner.jsx - Indicador visual animado de carga para procesos en segundo plano
+
+// ==========================================
+// Componente Spinner Accesible
+// ==========================================
 export function Spinner({ size = 'md', className = '' }) {
+  // Clases dimensionales de spinner
   const sizes = {
     sm: 'w-4 h-4 border-2',
     md: 'w-5 h-5 border-2',
@@ -8,6 +13,7 @@ export function Spinner({ size = 'md', className = '' }) {
 
   const selectedSize = sizes[size] || sizes.md;
 
+  // Renderizado del elemento circular giratorio
   return (
     <div
       role="status"

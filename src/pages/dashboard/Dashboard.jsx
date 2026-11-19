@@ -1,4 +1,7 @@
-// src/pages/dashboard/Dashboard.jsx - Panel de Control Operativo y Comercial BeaverVault
+// src/pages/dashboard/Dashboard.jsx - Panel de Control Principal, Indicadores Financieros (KPIs), Gráficos y Reportes
+// ==========================================
+// 1. Importaciones y Dependencias
+// ==========================================
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
@@ -14,6 +17,7 @@ import { Modal } from '../../components/common/Modal';
 import { PeriodFilter } from '../../components/common/PeriodFilter';
 import { RefreshButton } from '../../components/common/RefreshButton';
 import {
+  Receipt,
   Scale,
   Truck,
   Store,
@@ -32,7 +36,9 @@ import {
   Eye,
 } from 'lucide-react';
 
-// Paleta sobria y natural para variedades de palta (sin estridencias ni saturaciones)
+// ==========================================
+// 2. Configuración Visual de Variedades de Palta
+// ==========================================
 const VARIEDADES_CONFIG = {
   Fuerte: {
     nombre: 'Palta Fuerte',
@@ -60,10 +66,16 @@ const VARIEDADES_CONFIG = {
   },
 };
 
+// ==========================================
+// 3. Componente Principal Dashboard
+// ==========================================
 export function Dashboard() {
   const { user, empresaActiva } = useAuth();
   const empresaId = user?.empresaId;
 
+  // ----------------------------------------
+  // 4. Estados de Carga, Entidades y Periodo
+  // ----------------------------------------
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [exportMsg, setExportMsg] = useState('');
@@ -435,7 +447,7 @@ export function Dashboard() {
         ventas: ventasFiltradas,
         gastos: gastosFiltrados,
         inventario,
-        nombreEmpresa: empresaActiva?.nombre || user?.empresaNombre || 'JOSBECORSA S.A.C.',
+        nombreEmpresa: empresaActiva?.nombre || user?.empresaNombre || 'BeaverVault S.A.C.',
       });
       setExportMsg('Reporte en Excel descargado correctamente.');
       setTimeout(() => setExportMsg(''), 4000);
@@ -502,7 +514,7 @@ export function Dashboard() {
       });
   }, [analisisVariedades, metricaVariedad, valorTotalDonut, circunferencia]);
 
-  const nombreEmpresa = empresaActiva?.nombre || user?.empresaNombre || 'JOSBECORSA';
+  const nombreEmpresa = empresaActiva?.nombre || user?.empresaNombre || 'BeaverVault';
 
   return (
     <div className="space-y-6">
@@ -1379,34 +1391,35 @@ export function Dashboard() {
         <Modal
           isOpen={!!ventaDetalleModal}
           onClose={() => setVentaDetalleModal(null)}
+          icon={Receipt}
           title={`Detalle de Venta #${(ventaDetalleModal.ventaId || '').slice(0, 8)}`}
           subtitle="Comprobante registrado en balanza"
           maxWidth="max-w-lg"
         >
           <div className="space-y-4">
             {/* Metadatos de la venta */}
-            <div className="grid grid-cols-2 gap-2 p-3 bg-stone-50 rounded-xl border border-stone-200 text-xs">
+            <div className="grid grid-cols-2 gap-2.5 p-3.5 bg-stone-50 rounded-xl border border-stone-200 text-xs sm:text-sm">
               <div>
-                <span className="text-[10px] uppercase font-bold text-stone-400 block">Fecha y Hora</span>
-                <span className="font-semibold text-stone-800">
+                <span className="text-xs text-stone-500 font-semibold block">Fecha y Hora</span>
+                <span className="font-bold text-[#2C221E]">
                   {formatearFecha(ventaDetalleModal.fechaVenta)}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-stone-400 block">Puesto / Almacén</span>
-                <span className="font-semibold text-stone-800">
+                <span className="text-xs text-stone-500 font-semibold block">Puesto / Almacén</span>
+                <span className="font-bold text-[#2C221E]">
                   {ventaDetalleModal.ubicacionNombre || 'Puesto Principal'}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-stone-400 block">Forma de Pago</span>
-                <span className="font-semibold text-stone-800">
+                <span className="text-xs text-stone-500 font-semibold block">Forma de Pago</span>
+                <span className="font-bold text-[#2C221E]">
                   {ventaDetalleModal.metodoPago || 'Efectivo'}
                 </span>
               </div>
               <div>
-                <span className="text-[10px] uppercase font-bold text-stone-400 block">Vendedor</span>
-                <span className="font-semibold text-stone-800">
+                <span className="text-xs text-stone-500 font-semibold block">Vendedor</span>
+                <span className="font-bold text-[#2C221E]">
                   {ventaDetalleModal.vendedorNombre || ventaDetalleModal.usuario?.nombre || 'General'}
                 </span>
               </div>
@@ -1414,37 +1427,37 @@ export function Dashboard() {
 
             {/* Tabla de ítems vendidos */}
             <div>
-              <span className="text-xs font-bold text-stone-700 block mb-2">
+              <span className="text-xs sm:text-sm font-bold text-[#2C221E] block mb-2">
                 Paltas Pesadas en Balanza:
               </span>
               <div className="border border-stone-200 rounded-xl overflow-hidden">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-stone-100 text-stone-600 font-bold text-[10px] uppercase">
+                <table className="w-full text-left text-xs sm:text-sm">
+                  <thead className="bg-stone-100 text-stone-700 font-bold border-b border-stone-200">
                     <tr>
-                      <th className="py-2 px-3">Variedad</th>
-                      <th className="py-2 px-3">Calidad</th>
-                      <th className="py-2 px-3 text-right">Kilos</th>
-                      <th className="py-2 px-3 text-right">Precio/kg</th>
-                      <th className="py-2 px-3 text-right">Subtotal</th>
+                      <th className="py-2.5 px-3">Variedad</th>
+                      <th className="py-2.5 px-3">Calidad</th>
+                      <th className="py-2.5 px-3 text-right">Kilos</th>
+                      <th className="py-2.5 px-3 text-right">Precio/kg</th>
+                      <th className="py-2.5 px-3 text-right">Subtotal</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-100">
                     {Array.isArray(ventaDetalleModal.detalles) && ventaDetalleModal.detalles.length > 0 ? (
                       ventaDetalleModal.detalles.map((item, idx) => (
                         <tr key={idx} className="hover:bg-stone-50">
-                          <td className="py-2 px-3 font-bold text-stone-800">
+                          <td className="py-2.5 px-3 font-bold text-[#2C221E]">
                             Palta {item.tipoPalta || 'Fuerte'}
                           </td>
-                          <td className="py-2 px-3 text-stone-600">
+                          <td className="py-2.5 px-3 text-stone-600 font-medium">
                             {item.categoria || '1era'}
                           </td>
-                          <td className="py-2 px-3 text-right font-semibold text-stone-800">
+                          <td className="py-2.5 px-3 text-right font-bold text-[#2C221E]">
                             {formatearKilos(item.kilosVendidos)}
                           </td>
-                          <td className="py-2 px-3 text-right text-stone-600">
+                          <td className="py-2.5 px-3 text-right text-stone-600 font-medium">
                             {formatearMoneda(item.precioUnitario)}
                           </td>
-                          <td className="py-2 px-3 text-right font-black text-emerald-800">
+                          <td className="py-2.5 px-3 text-right font-black text-emerald-800">
                             {formatearMoneda(item.subtotal)}
                           </td>
                         </tr>
@@ -1462,9 +1475,9 @@ export function Dashboard() {
             </div>
 
             {/* Total final */}
-            <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
-              <span className="text-xs font-bold text-emerald-900">Total Liquidado:</span>
-              <span className="text-xl font-black text-emerald-900">
+            <div className="flex items-center justify-between p-4 bg-emerald-50 border border-emerald-200 rounded-xl">
+              <span className="text-xs sm:text-sm font-bold text-emerald-950">Total Liquidado:</span>
+              <span className="text-xl sm:text-2xl font-black text-emerald-800">
                 {formatearMoneda(ventaDetalleModal.montoTotal)}
               </span>
             </div>
@@ -1474,7 +1487,7 @@ export function Dashboard() {
               <button
                 type="button"
                 onClick={() => setVentaDetalleModal(null)}
-                className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold text-xs rounded-xl transition-colors cursor-pointer"
+                className="w-full sm:w-auto min-h-[44px] px-5 py-2.5 bg-stone-100 hover:bg-stone-200 text-[#2C221E] font-bold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer"
               >
                 Cerrar Comprobante
               </button>

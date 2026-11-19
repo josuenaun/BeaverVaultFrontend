@@ -1,8 +1,12 @@
-// src/components/layout/Navbar.jsx - Barra superior de navegación y estado de empresa BeaverVault
+// src/components/layout/Navbar.jsx - Barra superior con indicador de empresa activa, datos del usuario y cierre de sesión
 import { Menu, LogOut, Building, User, ChevronDown } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
+// ==========================================
+// Componente Navbar
+// ==========================================
 export function Navbar({ onOpenMobileMenu }) {
+  // Consumo del estado global de autenticación
   const {
     user,
     logout,
@@ -14,15 +18,20 @@ export function Navbar({ onOpenMobileMenu }) {
     loadingEmpresa,
   } = useAuth();
 
+  // Manejador del selector de empresa (para administradores con múltiples empresas)
   const handleEmpresaChange = (e) => {
     setEmpresaId(e.target.value);
   };
 
+  // Renderizado de la barra superior
   return (
     <header className="sticky top-0 z-30 bg-white border-b border-stone-200 h-16 shrink-0 shadow-xs">
       <div className="h-full px-4 sm:px-6 flex items-center justify-between gap-4">
-        {/* Lado izquierdo: Botón hamburguesa móvil + Identificador de Empresa */}
+        {/* ---------------------------------------- */}
+        {/* Lado izquierdo: Botón móvil y Empresa    */}
+        {/* ---------------------------------------- */}
         <div className="flex items-center gap-3">
+          {/* Botón hamburguesa para dispositivos móviles */}
           <button
             type="button"
             onClick={onOpenMobileMenu}
@@ -32,7 +41,7 @@ export function Navbar({ onOpenMobileMenu }) {
             <Menu className="w-6 h-6" />
           </button>
 
-          {/* Badge o Selector de Empresa desde el backend */}
+          {/* Selector de empresa o insignia de la empresa actual */}
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-lg bg-orange-100 text-[#E65100] flex items-center justify-center shrink-0">
               <Building className="w-4 h-4" />
@@ -58,52 +67,44 @@ export function Navbar({ onOpenMobileMenu }) {
               </div>
             ) : (
               <div className="leading-tight">
-                <span className="text-[10px] uppercase font-bold text-stone-500 block tracking-wider">
-                  Empresa Activa
-                </span>
-                {loadingEmpresa && !empresaActiva ? (
-                  <div className="h-4 w-24 bg-stone-200 rounded animate-pulse mt-0.5" />
-                ) : (
-                  <span
-                    className="text-xs font-bold text-[#2C221E] truncate max-w-[160px] sm:max-w-xs block"
-                    title={empresaActiva?.nombre || ''}
-                  >
-                    {empresaActiva?.nombre || 'Empresa'}
-                  </span>
-                )}
+                <p className="text-xs font-extrabold text-[#2C221E] truncate max-w-[150px] sm:max-w-[200px]">
+                  {loadingEmpresa ? 'Cargando...' : empresaActiva?.nombre || 'Empresa Principal'}
+                </p>
+                <p className="text-[10px] text-stone-600 font-semibold uppercase tracking-wider">
+                  Tenant Activo
+                </p>
               </div>
             )}
           </div>
         </div>
 
-        {/* Lado derecho: Usuario y Logout unificados en Marrón Carbón #2C221E */}
+        {/* ---------------------------------------- */}
+        {/* Lado derecho: Usuario y Cerrar Sesión   */}
+        {/* ---------------------------------------- */}
         <div className="flex items-center gap-3">
-          {/* Avatar e información del usuario con rol exacto del backend */}
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-full bg-[#2C221E] text-[#E8D8C8] flex items-center justify-center font-bold text-xs shadow-xs">
-              <User className="w-4 h-4" />
-            </div>
-            <div className="hidden sm:block text-left leading-tight">
-              <p className="text-xs font-bold text-[#2C221E] truncate max-w-[140px]">
-                {user?.nombre || user?.correo || 'Usuario'}
-              </p>
-              <span className="text-[10px] font-bold text-[#2C221E]/80 uppercase tracking-wider">
-                {rolNombre}
-              </span>
-            </div>
+          {/* Identificación del usuario y su rol */}
+          <div className="hidden sm:flex flex-col items-end leading-tight text-right">
+            <span className="text-xs font-bold text-[#2C221E]">
+              {user?.nombre || user?.correo?.split('@')[0] || 'Usuario'}
+            </span>
+            <span className="text-[10px] text-[#E65100] font-extrabold uppercase tracking-wide">
+              {rolNombre}
+            </span>
           </div>
 
-          <div className="h-6 w-px bg-stone-200 mx-1 hidden sm:block" />
+          <div className="w-9 h-9 rounded-full bg-stone-100 border border-stone-300 flex items-center justify-center text-stone-600">
+            <User className="w-4 h-4" />
+          </div>
 
-          {/* Botón Salir */}
+          {/* Botón de cierre de sesión */}
           <button
             type="button"
             onClick={logout}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-stone-700 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-transparent hover:border-rose-200 transition-all min-h-[44px] cursor-pointer"
-            title="Cerrar Sesión"
+            className="p-2 text-stone-500 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
           >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">Salir</span>
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </div>
