@@ -146,7 +146,7 @@ export function AcopioList() {
 
           <Link
             to="/acopio/nuevo"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E65100] hover:bg-[#cf4700] text-white rounded-xl text-xs font-bold transition-all shadow-sm min-h-[44px]"
+            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-[#E65100] hover:bg-[#cf4700] text-white rounded-xl text-xs font-bold transition-all shadow-sm min-h-11"
           >
             <Plus className="w-4 h-4" />
             <span>Nuevo Lote</span>
@@ -274,7 +274,7 @@ export function AcopioList() {
                               variant="outline"
                               size="sm"
                               onClick={() => handleAbrirDetalle(item)}
-                              className="min-h-[40px] px-3 font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300"
+                              className="min-h-10 px-3 font-bold text-stone-700 hover:text-stone-900 hover:bg-stone-100 hover:border-stone-300"
                               title="Ver detalle completo de jabas"
                             >
                               <Eye className="w-3.5 h-3.5 mr-1 text-[#2C221E]" />
@@ -284,7 +284,7 @@ export function AcopioList() {
                             <button
                               type="button"
                               onClick={() => setLoteAEliminar(item)}
-                              className="min-w-[40px] min-h-[40px] flex items-center justify-center p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
+                              className="min-w-10 min-h-10 flex items-center justify-center p-2 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer"
                               title="Eliminar lote"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -375,7 +375,7 @@ export function AcopioList() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleAbrirDetalle(item)}
-                      className="flex-1 text-[#2C221E] border-stone-300 hover:bg-stone-50 font-bold min-h-[44px]"
+                      className="flex-1 text-[#2C221E] border-stone-300 hover:bg-stone-50 font-bold min-h-11"
                     >
                       <Eye className="w-4 h-4 mr-1 text-[#2C221E]" />
                       Detalle
@@ -384,7 +384,7 @@ export function AcopioList() {
                     <button
                       type="button"
                       onClick={() => setLoteAEliminar(item)}
-                      className="p-2.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-stone-200 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer"
+                      className="p-2.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-stone-200 transition-colors min-h-11 min-w-11 flex items-center justify-center cursor-pointer"
                       title="Eliminar"
                     >
                       <Trash2 className="w-4 h-4" />

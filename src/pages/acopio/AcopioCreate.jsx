@@ -261,7 +261,7 @@ export function AcopioCreate() {
               />
 
               <Input
-                label="Fecha de Compra (Perú)"
+                label="Fecha de Compra"
                 name="fechaCompra"
                 type="date"
                 value={fechaCompra}
@@ -307,7 +307,7 @@ export function AcopioCreate() {
                       className="w-5 h-5 rounded-full border border-stone-300 shadow-xs"
                       style={{ backgroundColor: codigoColor }}
                     />
-                    <span className="text-xs font-mono font-bold text-stone-700 uppercase">
+                    <span className="text-xs font-mono font -bold text-stone-700 uppercase">
                       {codigoColor}
                     </span>
                   </div>

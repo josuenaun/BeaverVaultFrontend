@@ -237,7 +237,7 @@ export function ConfiguracionView() {
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-[42px] cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap min-h-10.5 cursor-pointer ${
                 active
                   ? 'bg-white text-[#2C221E] shadow-xs'
                   : 'text-stone-500 hover:text-stone-800 hover:bg-stone-200/50'
@@ -429,14 +429,14 @@ export function ConfiguracionView() {
               variant="secondary"
               onClick={() => setModalEmpresaOpen(false)}
               disabled={saving}
-              className="w-full sm:w-auto min-h-[44px]"
+              className="w-full sm:w-auto min-h-11"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               loading={saving}
-              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+              className="w-full sm:w-auto min-h-11 bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
             >
               Guardar Empresa
             </Button>
@@ -474,14 +474,14 @@ export function ConfiguracionView() {
               variant="secondary"
               onClick={() => setModalUbicacionOpen(false)}
               disabled={saving}
-              className="w-full sm:w-auto min-h-[44px]"
+              className="w-full sm:w-auto min-h-11"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               loading={saving}
-              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+              className="w-full sm:w-auto min-h-11 bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
             >
               Guardar Ubicación
             </Button>
@@ -537,14 +537,14 @@ export function ConfiguracionView() {
               variant="secondary"
               onClick={() => setModalUsuarioOpen(false)}
               disabled={saving}
-              className="w-full sm:w-auto min-h-[44px]"
+              className="w-full sm:w-auto min-h-11"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               loading={saving}
-              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+              className="w-full sm:w-auto min-h-11 bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
             >
               Guardar Usuario
             </Button>
@@ -581,14 +581,14 @@ export function ConfiguracionView() {
               variant="secondary"
               onClick={() => setModalRolOpen(false)}
               disabled={saving}
-              className="w-full sm:w-auto min-h-[44px]"
+              className="w-full sm:w-auto min-h-11"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               loading={saving}
-              className="w-full sm:w-auto min-h-[44px] bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
+              className="w-full sm:w-auto min-h-11 bg-[#E65100] hover:bg-[#cf4700] text-white font-bold"
             >
               Guardar Rol
             </Button>
